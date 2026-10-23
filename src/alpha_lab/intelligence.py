@@ -57,7 +57,11 @@ def append_unique(events: list[dict], out: str | Path) -> int:
             for line in stream:
                 if line.strip():
                     known.add(json.loads(line)["id"])
-    new_events = [event for event in events if event["id"] not in known and not known.add(event["id"])]
+    new_events = []
+    for event in events:
+        if event["id"] not in known:
+            known.add(event["id"])
+            new_events.append(event)
     with path.open("a", encoding="utf-8") as stream:
         for event in new_events:
             stream.write(json.dumps(event, ensure_ascii=False) + "\n")
