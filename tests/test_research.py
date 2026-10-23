@@ -54,6 +54,8 @@ def test_t_plus_one_exit_and_round_lots():
     exit_bar = Bar(last.symbol, (date.fromisoformat(last.date) + timedelta(days=2)).isoformat(),
                    last.close * 1.06, last.close * 1.08, last.close * 1.04, last.close * 1.06, 10000)
     report = research_backtest(bars + [entry, exit_bar], Assumptions())
+    assert report["trade_count"] == 1
+    assert report["trades"][0]["reason"] == "TARGET"
     for trade in report["trades"]:
         assert trade["entry_date"] < trade["exit_date"]
         assert trade["shares"] % 100 == 0
