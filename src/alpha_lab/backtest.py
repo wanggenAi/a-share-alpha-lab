@@ -66,7 +66,7 @@ def research_backtest(bars: list[Bar], cfg: Assumptions = Assumptions()) -> dict
         exit_price = None
         reason = ""
         # T+1: the earliest exit is one session AFTER the entry session.
-        for j in range(i + 2, min(len(bars), i + 2 + cfg.max_holding_sessions)):
+        for j in range(i + 2, len(bars)):
             day = bars[j]
             if _locked(day, bars[j - 1].close, "down", cfg.main_board_price_limit):
                 continue
@@ -86,8 +86,7 @@ def research_backtest(bars: list[Bar], cfg: Assumptions = Assumptions()) -> dict
         if exit_idx is None:
             # Unclosed trades are censored, NOT counted as profitable exits.
             censored += 1
-            i += 1
-            continue
+            break  # Avoid duplicate overlapping signals when an exit was never observed.
         exit_gross = shares * exit_price
         sell_fee = max(cfg.commission_min, exit_gross * cfg.commission_rate)
         sell_fee += exit_gross * (cfg.sell_stamp_tax + cfg.transfer_fee_rate)
