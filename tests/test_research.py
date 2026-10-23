@@ -68,3 +68,15 @@ def test_feed_provenance_and_dedup(tmp_path):
     path = tmp_path / "news.jsonl"
     assert append_unique(events, path) == 1
     assert append_unique(events, path) == 0
+
+
+def test_nan_is_rejected():
+    bars = bars_for_test()
+    with pytest.raises(ValueError, match="NONFINITE_DATA"):
+        validate_bars([Bar("600519", "2025-01-01", 10, 11, 9, float("nan"), 100)])
+
+
+def test_duplicate_news_in_single_batch(tmp_path):
+    xml = b"<rss><channel><item><title>A</title><link>https://example.com/x</link></item></channel></rss>"
+    event = parse_feed(xml, "https://example.com/rss", "2026-10-23T00:00:00+00:00")[0]
+    assert append_unique([event, event], tmp_path / "events.jsonl") == 1
