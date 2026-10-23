@@ -2,6 +2,7 @@
 from __future__ import annotations
 
 import csv
+from math import isfinite
 from dataclasses import dataclass
 from datetime import date
 from pathlib import Path
@@ -33,6 +34,8 @@ def validate_bars(bars: list[Bar]) -> list[Bar]:
         if bar.date <= previous:
             raise ValueError("OUT_OF_ORDER_OR_DUPLICATE_DATE")
         previous = bar.date
+        if not all(isfinite(value) for value in (bar.open, bar.high, bar.low, bar.close, bar.volume)):
+            raise ValueError("NONFINITE_DATA")
         if min(bar.open, bar.high, bar.low, bar.close) <= 0:
             raise ValueError("NONPOSITIVE_PRICE")
         if bar.low > min(bar.open, bar.close) or bar.high < max(bar.open, bar.close):
