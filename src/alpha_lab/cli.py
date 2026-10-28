@@ -89,9 +89,10 @@ def main() -> None:
         result = portfolio_from_directory(args.input_dir, settings,
                                           benchmark_csv=args.benchmark_csv)
         output = Path(args.out)
-        if output.resolve() in {p.resolve() for p in Path(args.input_dir).glob("*.csv")} or (
-                args.benchmark_csv and output.resolve() == Path(args.benchmark_csv).resolve()):
-            raise ValueError("PORTFOLIO_OUTPUT_CANNOT_OVERWRITE_SOURCE")
+        if (output.exists()
+                or output.resolve().is_relative_to(Path(args.input_dir).resolve())
+                or (args.benchmark_csv and output.resolve() == Path(args.benchmark_csv).resolve())):
+            raise ValueError("PORTFOLIO_OUTPUT_MUST_BE_NEW_AND_OUTSIDE_INPUT")
         output.parent.mkdir(parents=True, exist_ok=True)
         output.write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")
     elif args.command == "radar":
