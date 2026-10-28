@@ -1,0 +1,58 @@
+name: Manual public A-share research
+on:
+  workflow_dispatch:
+    inputs:
+      symbols:
+        description: 'PUBLIC codes comma-separated, max 10. Never enter private holdings.'
+        required: true
+        type: string
+        default: '600519'
+      start:
+        description: 'Start YYYYMMDD'
+        required: true
+        type: string
+        default: '20240101'
+      end:
+        description: 'End YYYYMMDD; leave blank for today in China'
+        required: false
+        type: string
+        default: ''
+      terms_confirmed:
+        description: 'I checked data terms and understand inputs/artifacts may be PUBLIC'
+        required: true
+        type: boolean
+        default: false
+
+permissions:
+  contents: read
+concurrency:
+  group: manual-public-research
+  cancel-in-progress: false
+
+jobs:
+  public-research:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Install research data tooling
+        run: python -m pip install -e '.[data]'
+      - name: Collect bounded public tickers and render research
+        env:
+          PUBLIC_SYMBOLS: ${{ inputs.symbols }}
+          PUBLIC_START: ${{ inputs.start }}
+          PUBLIC_END: ${{ inputs.end }}
+          PUBLIC_TERMS: ${{ inputs.terms_confirmed }}
+          PUBLIC_OUTPUT: output/manual-public-research
+        run: python tools/manual_public_research.py
+      - name: Upload public report or failure manifest (never private holdings)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: public-research-files
+          path: output/manual-public-research/
+          if-no-files-found: warn
+          retention-days: 3

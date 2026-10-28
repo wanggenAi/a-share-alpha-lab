@@ -262,3 +262,28 @@ universe can still exhibit survivorship bias; it lacks point-in-time
 delisting, issuer corporate actions, ST/IPO status and independently
 audited adjusted prices. Never treat non-overlapping folds on a
 hindsight-selected universe as genuine market-wide out-of-sample proof.
+
+## V0.12 manual PUBLIC market-research workflow
+
+After this workflow is merged into the default branch, open the repository
+**Actions → Manual public A-share research → Run workflow**. Enter up to
+10 **PUBLIC** six-digit ticker identifiers, start date `YYYYMMDD`, optional
+end date, and manually check the provider-terms acknowledgement.
+This is a **manual-only** workflow. It has **NO scheduled cron** and
+**NO broker execution**, and it does not accept private holdings, account
+details or secrets.
+
+If the upstream AKShare market feed responds and all symbols pass the manifest
+checks, the workflow publishes a short-retention ZIP artifact with
+`scan.json`, `dashboard.md`, `dashboard.html` and provenance metadata.
+If any ticker download fails, it marks the batch incomplete and does **not**
+produce a misleading finished dashboard; the partial manifest can help debug.
+
+**Public repository warning:** workflow inputs, logs and downloadable
+artifacts may be visible to others. Never enter personal holdings,
+private watchlists, passwords, licensed confidential data or client secrets.
+All datasets are unadjusted and not independently validated. A green offline
+CI test does **not** prove this manual workflow will fetch current market
+data: provider connectivity, rate limits and access rights must be checked in
+a real manually dispatched workflow run. Running GitHub Actions may consume
+account quota. See the separate private/local cockpit workflow for holdings.
