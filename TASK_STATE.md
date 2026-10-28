@@ -18,6 +18,7 @@ data collection. This is decision support, **not an autonomous brokerage bot**.
 - V0.7 bounded opt-in batch AKShare ingestion with SHA256 manifest and strict partial-data rejection.
 - V0.8 optional local benchmark-index technical trend context in the unified cockpit.
 - V0.9 experimental multi-symbol portfolio cash, marked equity, realized/unrealized P&L, T+1 and order/skip audit ledger with strict aligned-session and price-gap gates.
+- V0.10 optional single-command integration of historical portfolio research into the local HTML cockpit, clearly separated from actual user holdings.
 
 ## Important constraints
 - Repo is PUBLIC. Never commit local `data/`, `output/`, positions, API keys or paid datasets.

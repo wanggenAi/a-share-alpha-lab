@@ -207,3 +207,34 @@ alpha-lab portfolio --input-dir data/prices-20261027 \
 The report includes next-open **hypothetical** buys from prior-close signals, failed/skipped orders with reasons, T+1 exits, 100-share lots, buy/sell fees, capital and cash occupation, open positions, daily marked equity, realized/unrealized P&L, drawdown and turnover. The system validates cash/P&L reconciliation on **every observed session**. No intraday sell proceeds are used to buy at the same day's open. Optional `--benchmark-csv` adds only an **unadjusted price reference**, not a total-return alpha comparison. It never places orders.
 
 **Hard limits:** all stock series must share the same set of exact daily sessions; missing real suspension rows block the experiment. Only selected Shanghai/Shenzhen main-board identifiers and a simplified 10% price limit are included; ST, IPO and special no-limit sessions are **unverified**. Unexplained >10.5% gaps are blocked as possible unmodeled corporate actions. No dividends/splits, PIT security master/delisting population, credible executable stop fills, portfolio-level walk-forward fitting or independent out-of-sample profitability claim. Synthetic tests are **not evidence of profitable investment performance**.
+
+## V0.10 single-cockpit integration for hypothetical portfolio study
+
+When all daily ticker CSVs have the **same verified trading dates** and the
+most recent observed session matches `--asof`, the offline snapshot can
+optionally include V0.9 research in the same HTML cockpit:
+
+```bash
+alpha-lab run --input-dir data/prices --asof 2026-10-28 \
+  --holdings data/holdings.json \
+  --portfolio-first-trade-date 2024-01-02 \
+  --portfolio-starting-cash 100000 \
+  --portfolio-max-positions 5 \
+  --portfolio-allocation-fraction 0.20 \
+  --out-dir output/2026-10-28-with-research
+```
+
+**All dates in the example are illustrative**: first-trade date must actually
+exist in the data and provide 65 observed warmup sessions. The optional
+settings create an archived `portfolio_research.json` ledger and show
+a **separately labeled hypothetical research** equity curve in the
+canonical `cockpit.json`, `cockpit.md` and local `cockpit.html`.
+The visible simulation summary is deliberately distinct from user-provided
+**actual holdings**, market value and cash. Never confuse simulated strategy
+performance with your broker account or evidence of a profitable edge.
+
+The standalone `alpha-lab cockpit` command accepts
+`--portfolio-report output/portfolio-research.json` as an alternative
+to executing the simulation in `alpha-lab run`.
+Reports must end on the exact snapshot as-of date; mismatches, invalid equity
+or future-dated simulation results are rejected.

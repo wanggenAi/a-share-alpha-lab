@@ -48,6 +48,7 @@ def main() -> None:
     cockpit.add_argument("--previous", help="optional earlier local cockpit JSON")
     cockpit.add_argument("--fundamentals", help="optional local dated filing evidence JSON")
     cockpit.add_argument("--market-radar", help="optional market radar JSON")
+    cockpit.add_argument("--portfolio-report", help="optional historical hypothetical portfolio JSON")
     cockpit.add_argument("--out", required=True)
     cockpit.add_argument("--markdown", required=True)
     one = commands.add_parser("run", help="one-command offline snapshot including HTML cockpit")
@@ -57,6 +58,10 @@ def main() -> None:
     one.add_argument("--out-dir", required=True, help="new snapshot directory; never overwritten")
     one.add_argument("--fundamentals", help="optional dated financial filings JSON")
     one.add_argument("--benchmark-dir", help="optional local benchmark index CSV directory")
+    one.add_argument("--portfolio-first-trade-date", help="optional hypothetical portfolio start date")
+    one.add_argument("--portfolio-starting-cash", type=float, default=100000.0)
+    one.add_argument("--portfolio-max-positions", type=int, default=5)
+    one.add_argument("--portfolio-allocation-fraction", type=float, default=0.20)
     one.add_argument("--previous", help="previous saved cockpit.json for durable candidates")
     one.add_argument("--max-age-days", type=int, default=5)
     radar = commands.add_parser("radar", help="research-only index trend proxy")
@@ -115,6 +120,10 @@ def main() -> None:
                                     fundamentals_path=args.fundamentals,
                                     previous_path=args.previous,
                                     benchmark_dir=args.benchmark_dir,
+                                    portfolio_first_trade_date=args.portfolio_first_trade_date,
+                                    portfolio_starting_cash=args.portfolio_starting_cash,
+                                    portfolio_max_positions=args.portfolio_max_positions,
+                                    portfolio_allocation_fraction=args.portfolio_allocation_fraction,
                                     max_age_days=args.max_age_days)
     elif args.command == "fetch":
         bars = download_akshare(args.symbol, args.start, args.end)
@@ -134,11 +143,14 @@ def main() -> None:
             inputs.append(Path(args.fundamentals))
         if args.market_radar:
             inputs.append(Path(args.market_radar))
+        if args.portfolio_report:
+            inputs.append(Path(args.portfolio_report))
         if outputs[0].resolve() == outputs[1].resolve() or any(
                 x.resolve() in {p.resolve() for p in inputs} for x in outputs):
             raise ValueError("OUTPUT_MUST_NOT_OVERWRITE_INPUT")
         result = build_from_files(args.scan, args.holdings, args.previous,
-                                  args.fundamentals, args.market_radar)
+                                  args.fundamentals, args.market_radar,
+                                  args.portfolio_report)
         for path in outputs:
             path.parent.mkdir(parents=True, exist_ok=True)
         outputs[0].write_text(json.dumps(result, indent=2, ensure_ascii=False),

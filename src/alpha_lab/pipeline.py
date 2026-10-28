@@ -10,6 +10,7 @@ from .cockpit import build_cockpit, render_cockpit
 from .html_dashboard import render_html
 from .scan import scan_directory
 from .market_radar import build_market_radar
+from .portfolio import PortfolioRules, portfolio_from_directory
 
 
 def run_local_pipeline(*, input_dir: str | Path, holdings_path: str | Path,
@@ -17,6 +18,10 @@ def run_local_pipeline(*, input_dir: str | Path, holdings_path: str | Path,
                        fundamentals_path: str | Path | None = None,
                        previous_path: str | Path | None = None,
                        benchmark_dir: str | Path | None = None,
+                       portfolio_first_trade_date: str | None = None,
+                       portfolio_starting_cash: float = 100000.0,
+                       portfolio_max_positions: int = 5,
+                       portfolio_allocation_fraction: float = 0.20,
                        max_age_days: int = 5) -> dict:
     """No market downloads, no orders, no overwriting existing snapshots."""
     dest = Path(out_dir).resolve()
@@ -38,8 +43,19 @@ def run_local_pipeline(*, input_dir: str | Path, holdings_path: str | Path,
     market = (build_market_radar(benchmark_dir, asof=asof,
                                   max_age_days=max_age_days)
               if benchmark_dir is not None else None)
+    experiment = None
+    if portfolio_first_trade_date is not None:
+        rules = PortfolioRules(
+            first_trade_date=portfolio_first_trade_date,
+            starting_cash=portfolio_starting_cash,
+            max_positions=portfolio_max_positions,
+            allocation_fraction=portfolio_allocation_fraction)
+        experiment = portfolio_from_directory(input_dir, rules)
+        if experiment["last_session"] != asof:
+            raise ValueError("HYPOTHETICAL_PORTFOLIO_ASOF_MISMATCH")
     cockpit = build_cockpit(scan, holdings, previous=previous,
-                            fundamentals=financial, market_radar=market)
+                            fundamentals=financial, market_radar=market,
+                            historical_portfolio=experiment)
     rendered_html = render_html(cockpit)
     rendered_markdown = render_cockpit(cockpit)
 
@@ -52,6 +68,8 @@ def run_local_pipeline(*, input_dir: str | Path, holdings_path: str | Path,
             "cockpit.md": rendered_markdown,
             "cockpit.html": rendered_html,
         }
+        if experiment is not None:
+            files["portfolio_research.json"] = json.dumps(experiment, ensure_ascii=False, indent=2)
         if market is not None:
             files["market_radar.json"] = json.dumps(market, ensure_ascii=False, indent=2)
         for name, data in files.items():

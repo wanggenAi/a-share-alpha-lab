@@ -91,15 +91,60 @@ def _clean_scan(scan: dict) -> tuple[str, dict[str, dict], int]:
     return asof, indexed, max_age
 
 
+def _summarize_hypothetical_portfolio(value: dict | None, asof: str) -> dict | None:
+    """Never present historical simulated equity as an actual user's account."""
+    if value is None:
+        return None
+    if (not isinstance(value, dict)
+            or value.get("status") != "UNVERIFIED_HISTORICAL_PORTFOLIO_RESEARCH_ONLY"
+            or value.get("last_session") != asof):
+        raise ValueError("HYPOTHETICAL_PORTFOLIO_ASOF_MISMATCH")
+    curve, metrics = value.get("daily_equity"), value.get("metrics")
+    if not isinstance(curve, list) or not curve or not isinstance(metrics, dict):
+        raise ValueError("INVALID_HYPOTHETICAL_PORTFOLIO_REPORT")
+    previous_day = ""
+    for point in curve:
+        if not isinstance(point, dict):
+            raise ValueError("INVALID_HYPOTHETICAL_PORTFOLIO_REPORT")
+        day = _iso(point.get("date"))
+        amount = point.get("equity")
+        if (day <= previous_day or day > asof or not _finite_nonnegative(amount)):
+            raise ValueError("INVALID_HYPOTHETICAL_PORTFOLIO_CURVE")
+        previous_day = day
+    if (curve[-1]["date"] != asof
+            or not _finite_nonnegative(metrics.get("ending_equity_marked"))
+            or abs(curve[-1]["equity"] - metrics["ending_equity_marked"]) > 0.0001):
+        raise ValueError("INVALID_HYPOTHETICAL_PORTFOLIO_EQUITY")
+    return {
+        "status": "HYPOTHETICAL_RESEARCH_NOT_REAL_HOLDINGS",
+        "first_trade_date": value.get("first_trade_date"),
+        "last_session": asof,
+        "universe_symbols": value.get("universe_symbols"),
+        "metrics": {
+            key: metrics.get(key) for key in (
+                "starting_equity", "ending_equity_marked",
+                "total_marked_return_pct", "max_marked_drawdown_pct",
+                "closed_trade_count", "closed_trade_win_rate",
+                "turnover_to_starting_capital", "stale_mark_sessions")
+        },
+        "daily_equity": [{"date": p["date"], "equity": p["equity"],
+                          "drawdown_pct": p.get("drawdown_pct")}
+                         for p in curve],
+        "warning": "UNVERIFIED_FIXED_RULE_HISTORICAL_SIMULATION_NOT_BROKER_PNL",
+    }
+
+
 def build_cockpit(scan: dict, holdings: dict, previous: dict | None = None,
                   fundamentals: dict | None = None,
-                  market_radar: dict | None = None) -> dict:
+                  market_radar: dict | None = None,
+                  historical_portfolio: dict | None = None) -> dict:
     asof, indexed, max_age = _clean_scan(scan)
     if market_radar is not None and (
             not isinstance(market_radar, dict)
             or market_radar.get("status") != "LOCAL_INDEX_TECHNICAL_CONTEXT_ONLY"
             or market_radar.get("asof") != asof):
         raise ValueError("MARKET_RADAR_ASOF_MISMATCH")
+    simulated = _summarize_hypothetical_portfolio(historical_portfolio, asof)
     positions, cash = validate_holdings(holdings, asof)
     reference_prices = {
         symbol: price for symbol, row in indexed.items()
@@ -206,13 +251,14 @@ def build_cockpit(scan: dict, holdings: dict, previous: dict | None = None,
         else "UNKNOWN_INCOMPLETE_VALUATION"
     )
     return {
-        "schema_version": "0.8",
+        "schema_version": "0.10",
         "status": "RESEARCH_COCKPIT",
         "generated_at_utc": datetime.now(timezone.utc).isoformat(),
         "asof": asof,
         "investment_decision_status": "HUMAN_REVIEW_REQUIRED_NOT_A_BUY_OR_SELL_SIGNAL",
         "holdings": valued,
         "market_radar": market_radar,
+        "portfolio_experiment": simulated,
         "candidates": candidates,
         "summary": {
             "positions": len(valued),
@@ -240,6 +286,7 @@ def build_cockpit(scan: dict, holdings: dict, previous: dict | None = None,
             "manual_financial_data_unverified_and_not_market_wide",
             "fiscal_period_and_publication_date_are_distinct",
             "benchmark_trend_is_not_economic_cycle_forecast",
+            "hypothetical_portfolio_research_is_separate_from_user_account",
             "all_actions_are_review_labels_not_trade_instructions",
         ],
     }
@@ -276,6 +323,13 @@ def render_cockpit(report: dict) -> str:
             c["symbol"], c["first_seen_asof"], c["research_state"],
             c["financial_status"], c["evidence_source"], c["reason"],
         )) + " |")
+    research = report.get("portfolio_experiment")
+    if research is not None:
+        m = research["metrics"]
+        lines += ["", "## Historical hypothetical portfolio experiment (NOT actual holdings)", "",
+                  f'Simulated marked return: {m["total_marked_return_pct"]}%',
+                  f'Simulated max drawdown: {m["max_marked_drawdown_pct"]}%',
+                  f'Simulated closed trades: {m["closed_trade_count"]}', ""]
     lines += ["", "## Market and cycle radar", "",
               s["market_cycle_radar"], "", "## Limitations", ""]
     lines += ["- " + x for x in report["limitations"]]
@@ -286,7 +340,8 @@ def render_cockpit(report: dict) -> str:
 def build_from_files(scan_path: str | Path, holdings_path: str | Path,
                      previous_path: str | Path | None = None,
                      fundamentals_path: str | Path | None = None,
-                     market_radar_path: str | Path | None = None) -> dict:
+                     market_radar_path: str | Path | None = None,
+                     historical_portfolio_path: str | Path | None = None) -> dict:
     scan = json.loads(Path(scan_path).read_text(encoding="utf-8"))
     holdings = json.loads(Path(holdings_path).read_text(encoding="utf-8"))
     prior = (json.loads(Path(previous_path).read_text(encoding="utf-8"))
@@ -295,5 +350,8 @@ def build_from_files(scan_path: str | Path, holdings_path: str | Path,
                  if fundamentals_path is not None else None)
     market = (json.loads(Path(market_radar_path).read_text(encoding="utf-8"))
               if market_radar_path is not None else None)
+    experiment = (json.loads(Path(historical_portfolio_path).read_text(encoding="utf-8"))
+                  if historical_portfolio_path is not None else None)
     return build_cockpit(scan, holdings, previous=prior,
-                         fundamentals=financial, market_radar=market)
+                         fundamentals=financial, market_radar=market,
+                         historical_portfolio=experiment)
