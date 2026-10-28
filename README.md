@@ -34,3 +34,20 @@ Nothing here places a brokerage order. The backtest reports *experimental trade 
 (1) verified point-in-time ticker universe and delistings, (2) corporate-action-adjusted total-return prices without forward leakage, (3) realistic limit/suspension and order execution, (4) walk-forward out-of-sample experiments with fixed search budgets and holdout, (5) portfolio-level equity curves and benchmarks, (6) live feed provenance and freshness, (7) a human-reviewed execution dashboard.
 
 Development gates: **data integrity → credible backtest → forward paper trading → advisory dashboard**. Never optimize solely for forcing BUY signals.
+
+## V0.2 offline candidate scan and dashboard
+
+This reads **local CSV files only** (same schema as `alpha-lab fetch`), without downloading or fabricating prices:
+
+```bash
+alpha-lab scan --input-dir data --asof 2026-10-28 --max-age-days 5 \
+  --out output/scan.json --markdown output/dashboard.md
+```
+
+It creates **one canonical JSON report** and a human-readable Markdown view. Files with invalid schema, stale/future dates, insufficient history, recent zero volume, or duplicate tickers are explicitly rejected, not silently omitted. `WATCH_SIGNAL` means a technical *research* pattern matched, `WAIT_PRICE` means a rising trend is near MA20 without confirmation, and `REJECT` means the setup or data checks failed. None is a verified `BUY` signal.
+
+* The scan requires explicit `--asof` and only reads `*.csv` at the supplied directory's top level.
+* `--max-age-days` measures **calendar days**, not trading sessions; long public holidays may cause conservative stale rejections.
+* No fundamentals, PE/PB, cash flow, ST status, corporate action adjustments, or live order book are yet validated.
+* Never commit private holdings or downloaded/paid market feeds to this public repository. The default `data/` and `output/` directories are git-ignored.
+* Next gate: verified adjusted point-in-time data, walk-forward evaluation, and portfolio-level evidence, **before** any executable investment recommendation.

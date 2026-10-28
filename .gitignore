@@ -218,3 +218,7 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+# Research inputs/outputs can contain private holdings or licensed market data.
+/data/
+/output/
