@@ -51,3 +51,18 @@ It creates **one canonical JSON report** and a human-readable Markdown view. Fil
 * No fundamentals, PE/PB, cash flow, ST status, corporate action adjustments, or live order book are yet validated.
 * Never commit private holdings or downloaded/paid market feeds to this public repository. The default `data/` and `output/` directories are git-ignored.
 * Next gate: verified adjusted point-in-time data, walk-forward evaluation, and portfolio-level evidence, **before** any executable investment recommendation.
+
+## V0.3 fixed-rule chronological holdout
+
+```bash
+alpha-lab evaluate --csv data/600519.csv --warmup 120 --window 60 --out output/evaluation.json
+```
+
+Non-overlapping 60-observation holdout windows use 120 earlier observations
+for indicator warmup. Each experiment sees **no bars beyond its own test end**.
+Transactions are initiated only from signals dated inside the holdout window.
+Open positions at fold end are censored; trades are not carried across folds.
+Statistics are descriptive, **not** statistically significant evidence of edge.
+The passive close-change is a *reference*, not a total-return benchmark.
+This fixed-rule run is **not fitting/re-optimizing a model** and does not
+address survivorship bias, corporate actions or point-in-time universes.

@@ -9,6 +9,7 @@ from .backtest import research_backtest
 from .data import download_akshare, load_csv, save_csv
 from .intelligence import poll_feeds
 from .scan import scan_directory, render_dashboard
+from .evaluation import evaluate_file
 
 
 def main() -> None:
@@ -31,6 +32,11 @@ def main() -> None:
     scan.add_argument("--max-age-days", type=int, default=5)
     scan.add_argument("--out", required=True, help="canonical JSON report")
     scan.add_argument("--markdown", required=True, help="readable dashboard Markdown")
+    evaluate = commands.add_parser("evaluate", help="chronological fixed-rule holdout experiment")
+    evaluate.add_argument("--csv", required=True)
+    evaluate.add_argument("--warmup", type=int, default=120)
+    evaluate.add_argument("--window", type=int, default=60)
+    evaluate.add_argument("--out", required=True)
     args = parser.parse_args()
     if args.command == "fetch":
         bars = download_akshare(args.symbol, args.start, args.end)
@@ -41,6 +47,12 @@ def main() -> None:
         destination = Path(args.out)
         destination.parent.mkdir(parents=True, exist_ok=True)
         destination.write_text(json.dumps(result, indent=2, ensure_ascii=False), encoding="utf-8")
+    elif args.command == "evaluate":
+        result = evaluate_file(args.csv, warmup=args.warmup, window=args.window)
+        destination = Path(args.out)
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        destination.write_text(json.dumps(result, indent=2, ensure_ascii=False),
+                               encoding="utf-8")
     elif args.command == "scan":
         result = scan_directory(args.input_dir, asof=args.asof,
                                 max_age_days=args.max_age_days)
