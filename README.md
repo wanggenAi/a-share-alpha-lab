@@ -340,3 +340,35 @@ dates/symbols lack or contradict eligibility declarations. A zero-block
 **declared** ledger is not independently source-verified and not investable.
 Any calendar or corporate-action evidence of real trading requires
 verification against authoritative exchange/issuer records.
+
+## V0.14 incremental research data refresh (opt-in, no cron yet)
+
+To extend an existing complete, hashed, locally retained AKShare unadjusted
+dataset without redownloading the entire history, first confirm that you have
+the necessary upstream data access permissions:
+
+```bash
+alpha-lab refresh --previous-dir data/2026-10-27-prices \
+  --end 20261028 --out-dir data/2026-10-28-prices \
+  --overlap-days 21 --source-terms-confirmed
+```
+
+The previous directory **must** have a valid complete SHA256 ingestion manifest;
+the next directory **must not exist** and cannot overwrite or nest inside the
+previous snapshot. Each stock re-fetches at most a bounded overlapping calendar
+period plus new days. Every overlapping OHLCV observation must match exactly,
+otherwise the batch is `PARTIAL_BLOCKED` (do not use it for research).
+Missing days or source revisions are **not** silently repaired: inspect
+exchange/issuer corporate-action data independently.
+
+The new complete manifest includes the previous manifest SHA256, each prior
+stock-file SHA256, overlap count, appended session count and outcome per
+ticker. Zero new sessions is an explicit **overlap-rechecked, not fresh quote**
+result. No new report is published from a partial refresh; the failure manifest
+remains locally accessible. The same `alpha-lab scan` / `alpha-lab run`
+input interfaces accept the new complete directory.
+
+No hourly job has been enabled. An operator must still provide actual authorized
+data access and test provider reliability before unattended scheduling. Neither
+the daily data nor this refresh is a real-time price feed or PIT total-return
+database.
