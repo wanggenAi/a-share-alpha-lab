@@ -192,3 +192,18 @@ falling, or mixed MA20/MA60 technical trends. If any input index is stale or
 blocked, the **aggregate trend is unavailable**. It does not scrape indices,
 verify ticker names, infer industry rotation or predict an economic cycle.
 An arbitrary sample of 1–10 indices must not be described as market-wide breadth.
+
+## V0.9 multi-symbol experimental portfolio accounting
+
+The research command uses a **locally stored**, aligned, main-board-only OHLCV panel. Example (the start date must actually occur in all input series, after at least 65 prior observations):
+
+```bash
+alpha-lab portfolio --input-dir data/prices-20261027 \
+  --first-trade-date 2024-01-02 --starting-cash 100000 \
+  --max-positions 5 --allocation-fraction 0.20 \
+  --out output/portfolio-research.json
+```
+
+The report includes next-open **hypothetical** buys from prior-close signals, failed/skipped orders with reasons, T+1 exits, 100-share lots, buy/sell fees, capital and cash occupation, open positions, daily marked equity, realized/unrealized P&L, drawdown and turnover. The system validates cash/P&L reconciliation on **every observed session**. No intraday sell proceeds are used to buy at the same day's open. Optional `--benchmark-csv` adds only an **unadjusted price reference**, not a total-return alpha comparison. It never places orders.
+
+**Hard limits:** all stock series must share the same set of exact daily sessions; missing real suspension rows block the experiment. Only selected Shanghai/Shenzhen main-board identifiers and a simplified 10% price limit are included; ST, IPO and special no-limit sessions are **unverified**. Unexplained >10.5% gaps are blocked as possible unmodeled corporate actions. No dividends/splits, PIT security master/delisting population, credible executable stop fills, portfolio-level walk-forward fitting or independent out-of-sample profitability claim. Synthetic tests are **not evidence of profitable investment performance**.

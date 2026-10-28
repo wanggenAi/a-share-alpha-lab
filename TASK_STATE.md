@@ -17,13 +17,14 @@ data collection. This is decision support, **not an autonomous brokerage bot**.
 - V0.6 atomic one-command offline snapshot workflow with local static HTML dashboard, no overwrites and escaping.
 - V0.7 bounded opt-in batch AKShare ingestion with SHA256 manifest and strict partial-data rejection.
 - V0.8 optional local benchmark-index technical trend context in the unified cockpit.
+- V0.9 experimental multi-symbol portfolio cash, marked equity, realized/unrealized P&L, T+1 and order/skip audit ledger with strict aligned-session and price-gap gates.
 
 ## Important constraints
 - Repo is PUBLIC. Never commit local `data/`, `output/`, positions, API keys or paid datasets.
 - Unadjusted AKShare bars may have dividend/split distortions. No "validated annualized return" claim.
 - No point-in-time universe including delistings, ST, corporate actions, corporate filings, or
   audited fundamentals yet; technical research states MUST NOT become true BUY/SELL advice.
-- Time isolation is tested; predictive outperformance and true portfolio simulation are NOT proven.
+- Time isolation is tested; portfolio accounting is hypothetical, not PIT-universe verified or independently proven profitable.
 - No authenticated market/news source has been enabled for hourly unattended collection.
 - Strategy and backtest cannot place orders.
 

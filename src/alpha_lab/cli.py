@@ -14,6 +14,7 @@ from .cockpit import build_from_files, render_cockpit
 from .pipeline import run_local_pipeline
 from .ingestion import batch_ingest
 from .market_radar import build_market_radar
+from .portfolio import PortfolioRules, portfolio_from_directory
 
 
 def main() -> None:
@@ -71,8 +72,30 @@ def main() -> None:
     ingest.add_argument("--delay-seconds", type=float, default=2.0)
     ingest.add_argument("--source-terms-confirmed", action="store_true",
                         help="operator has verified the applicable data access terms")
+    portfolio = commands.add_parser("portfolio", help="multi-symbol hypothetical cash/equity research, NOT trades")
+    portfolio.add_argument("--input-dir", required=True)
+    portfolio.add_argument("--first-trade-date", required=True, help="YYYY-MM-DD observed session")
+    portfolio.add_argument("--starting-cash", type=float, default=100000.0)
+    portfolio.add_argument("--max-positions", type=int, default=5)
+    portfolio.add_argument("--allocation-fraction", type=float, default=0.2)
+    portfolio.add_argument("--benchmark-csv", help="local unadjusted price reference only")
+    portfolio.add_argument("--out", required=True)
     args = parser.parse_args()
-    if args.command == "radar":
+    if args.command == "portfolio":
+        settings = PortfolioRules(starting_cash=args.starting_cash,
+                                  first_trade_date=args.first_trade_date,
+                                  max_positions=args.max_positions,
+                                  allocation_fraction=args.allocation_fraction)
+        result = portfolio_from_directory(args.input_dir, settings,
+                                          benchmark_csv=args.benchmark_csv)
+        output = Path(args.out)
+        if (output.exists()
+                or output.resolve().is_relative_to(Path(args.input_dir).resolve())
+                or (args.benchmark_csv and output.resolve() == Path(args.benchmark_csv).resolve())):
+            raise ValueError("PORTFOLIO_OUTPUT_MUST_BE_NEW_AND_OUTSIDE_INPUT")
+        output.parent.mkdir(parents=True, exist_ok=True)
+        output.write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")
+    elif args.command == "radar":
         result = build_market_radar(args.input_dir, asof=args.asof,
                                     max_age_days=args.max_age_days)
         path = Path(args.out)
