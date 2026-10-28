@@ -14,6 +14,7 @@ data collection. This is decision support, **not an autonomous brokerage bot**.
 - V0.3 chronological fixed-rule holdout experiments (non-overlapping windows, no future signals).
 - V0.4 local holdings, concentration review, persistent research candidates and unified offline cockpit.
 - V0.5 optional dated, manually declared filing evidence with as-of publication guards and cash-flow / debt / comparable-period metrics.
+- V0.6 atomic one-command offline snapshot workflow with local static HTML dashboard, no overwrites and escaping.
 
 ## Important constraints
 - Repo is PUBLIC. Never commit local `data/`, `output/`, positions, API keys or paid datasets.

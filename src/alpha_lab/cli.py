@@ -11,6 +11,7 @@ from .intelligence import poll_feeds
 from .scan import scan_directory, render_dashboard
 from .evaluation import evaluate_file
 from .cockpit import build_from_files, render_cockpit
+from .pipeline import run_local_pipeline
 
 
 def main() -> None:
@@ -45,8 +46,23 @@ def main() -> None:
     cockpit.add_argument("--fundamentals", help="optional local dated filing evidence JSON")
     cockpit.add_argument("--out", required=True)
     cockpit.add_argument("--markdown", required=True)
+    one = commands.add_parser("run", help="one-command offline snapshot including HTML cockpit")
+    one.add_argument("--input-dir", required=True, help="local CSV market history directory")
+    one.add_argument("--holdings", required=True, help="local/private holdings JSON")
+    one.add_argument("--asof", required=True, help="explicit YYYY-MM-DD snapshot date")
+    one.add_argument("--out-dir", required=True, help="new snapshot directory; never overwritten")
+    one.add_argument("--fundamentals", help="optional dated financial filings JSON")
+    one.add_argument("--previous", help="previous saved cockpit.json for durable candidates")
+    one.add_argument("--max-age-days", type=int, default=5)
     args = parser.parse_args()
-    if args.command == "fetch":
+    if args.command == "run":
+        result = run_local_pipeline(input_dir=args.input_dir,
+                                    holdings_path=args.holdings,
+                                    asof=args.asof, out_dir=args.out_dir,
+                                    fundamentals_path=args.fundamentals,
+                                    previous_path=args.previous,
+                                    max_age_days=args.max_age_days)
+    elif args.command == "fetch":
         bars = download_akshare(args.symbol, args.start, args.end)
         save_csv(bars, args.out)
         result = {"status": "DOWNLOADED_UNADJUSTED_RESEARCH_ONLY", "bars": len(bars), "path": args.out}
