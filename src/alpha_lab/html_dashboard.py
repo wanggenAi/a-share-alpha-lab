@@ -73,6 +73,13 @@ def render_html(report: dict) -> str:
         + "</span><strong>" + safe(v) + "</strong></div>" for k, v in summary
     )
     limitations = "".join("<li>" + safe(x) + "</li>" for x in report["limitations"])
+    indices = (report.get("market_radar") or {}).get("indices", [])
+    radar_table = _table(
+        ["指数代码","趋势","数据日期","数据来源","判断依据"],
+        [[x["symbol"], x["trend"], x["last_data_date"],
+          x["source"], x["reason"]] for x in indices],
+        "尚未提供指数行情；不推断市场周期。"
+    )
     styles = """
     :root{color-scheme:light;font-family:system-ui,-apple-system,"PingFang SC","Microsoft YaHei",sans-serif;
     background:#f5f7fb;color:#152137}*{box-sizing:border-box}body{margin:0}
@@ -115,7 +122,7 @@ def render_html(report: dict) -> str:
         + "<p class='small'>长期候选不会仅因一天未触发技术条件就被删除。</p></section>"
         "<section><h2>风险与市场周期</h2><p>集中度："
         + safe(s["concentration_30pct_flag"]) + "</p><p>市场周期："
-        + safe(s["market_cycle_radar"]) + "</p></section>"
+        + safe(s["market_cycle_radar"]) + "</p>" + radar_table + "</section>"
         "<section><h2>证据限制与待核实项</h2><ul>" + limitations + "</ul>"
         "<p class='small'>所有图表和表格均由同一份本地 JSON 快照生成。"
         "报告包含私人持仓信息，请勿上传到公开仓库。</p></section>"
