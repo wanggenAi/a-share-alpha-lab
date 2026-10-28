@@ -11,6 +11,7 @@ from pathlib import Path
 
 from .data import Bar, load_csv, validate_bars
 from .strategy import detect
+from .ingestion import check_ingestion_manifest
 
 
 STATUS_ORDER = {"WATCH_SIGNAL": 0, "WAIT_PRICE": 1, "REJECT": 2}
@@ -112,6 +113,7 @@ def scan_directory(directory: str | Path, *, asof: str,
     root = Path(directory)
     if not root.is_dir():
         raise ValueError("INPUT_DIRECTORY_NOT_FOUND")
+    manifest = check_ingestion_manifest(root)
     csvs = sorted(root.glob("*.csv"))
     if not csvs:
         raise ValueError("NO_CSV_FILES_FOUND")
@@ -144,7 +146,13 @@ def scan_directory(directory: str | Path, *, asof: str,
         "status": "RESEARCH_ONLY_NOT_VALIDATED",
         "generated_at_utc": datetime.now(timezone.utc).isoformat(),
         "asof": asof,
-        "source_type": "LOCAL_UNADJUSTED_CSV",
+        "source_type": "AKSHARE_UNADJUSTED_MANIFEST" if manifest else "LOCAL_UNVERIFIED_CSV",
+        "ingestion_provenance": (
+            {"status": manifest["status"], "source": manifest["source"],
+             "retrieved_at_utc": manifest["retrieved_at_utc"],
+             "requested_count": len(manifest["requested_symbols"])}
+            if manifest else {"status": "NO_MANIFEST_UNVERIFIED_INPUT"}
+        ),
         "max_age_calendar_days": max_age_days,
         "scanned_files": len(csvs),
         "status_counts": counts,

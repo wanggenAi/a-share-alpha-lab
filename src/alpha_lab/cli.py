@@ -12,6 +12,7 @@ from .scan import scan_directory, render_dashboard
 from .evaluation import evaluate_file
 from .cockpit import build_from_files, render_cockpit
 from .pipeline import run_local_pipeline
+from .ingestion import batch_ingest
 
 
 def main() -> None:
@@ -54,8 +55,22 @@ def main() -> None:
     one.add_argument("--fundamentals", help="optional dated financial filings JSON")
     one.add_argument("--previous", help="previous saved cockpit.json for durable candidates")
     one.add_argument("--max-age-days", type=int, default=5)
+    ingest = commands.add_parser("ingest", help="bounded opt-in AKShare daily batch download")
+    ingest.add_argument("--symbols", required=True, help="local JSON array of <=30 symbols")
+    ingest.add_argument("--start", required=True, help="YYYYMMDD")
+    ingest.add_argument("--end", required=True, help="YYYYMMDD")
+    ingest.add_argument("--out-dir", required=True, help="new local directory")
+    ingest.add_argument("--delay-seconds", type=float, default=2.0)
+    ingest.add_argument("--source-terms-confirmed", action="store_true",
+                        help="operator has verified the applicable data access terms")
     args = parser.parse_args()
-    if args.command == "run":
+    if args.command == "ingest":
+        symbols = json.loads(Path(args.symbols).read_text(encoding="utf-8"))
+        result = batch_ingest(symbols=symbols, start=args.start, end=args.end,
+                              out_dir=args.out_dir,
+                              delay_seconds=args.delay_seconds,
+                              source_terms_confirmed=args.source_terms_confirmed)
+    elif args.command == "run":
         result = run_local_pipeline(input_dir=args.input_dir,
                                     holdings_path=args.holdings,
                                     asof=args.asof, out_dir=args.out_dir,
