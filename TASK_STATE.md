@@ -22,6 +22,7 @@ data collection. This is decision support, **not an autonomous brokerage bot**.
 - V0.11 bounded non-overlapping chronological *fixed-rule* portfolio folds with independent cash/equity accounting and no future-bar leakage assertions.
 - V0.12 optional manually dispatched PUBLIC ticker research workflow with terms acknowledgement, strict limited inputs and a short-retention artifact; no private holdings or cron.
 - V0.13 opt-in per-session as-known-before-preopen trading-status/corporate-action audit and strict fail-closed portfolio gates, with **declared-unverified** source classification.
+- V0.14 immutable incremental daily CSV refresh with bounded overlap checks, lineage hashes, partial-batch gating and opt-in data-rights confirmation.
 
 ## Important constraints
 - Repo is PUBLIC. Never commit local `data/`, `output/`, positions, API keys or paid datasets.
@@ -38,7 +39,7 @@ data collection. This is decision support, **not an autonomous brokerage bot**.
    true units, consolidated reporting, share dilution and annual/cumulative comparability.
 3. Adjusted-data portfolio backtest with cash/equity curve, benchmarks and realistic session limits;
    independent holdout across PIT universe incl. delistings.
-4. Opt-in verifiable sources, rate limits/retention, ingestion monitoring and safe scheduler
+4. Verify permissioned providers and real-world connectivity; implement monitored durable ingestion and a safe opt-in scheduler (V0.14 only supports manual incremental refresh)
    before enabling hourly jobs.
 5. Product UI (local dashboard), paper-trading journal and tracked candidate explanations.
 6. External independent review before any advisory BUY label.

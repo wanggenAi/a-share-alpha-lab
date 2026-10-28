@@ -13,6 +13,7 @@ from .evaluation import evaluate_file
 from .cockpit import build_from_files, render_cockpit
 from .pipeline import run_local_pipeline
 from .ingestion import batch_ingest
+from .refresh import refresh_snapshot
 from .market_radar import build_market_radar
 from .tradability import audit_eligibility_file
 from .portfolio import PortfolioRules, portfolio_from_directory
@@ -102,8 +103,21 @@ def main() -> None:
     audit.add_argument("--input-dir", required=True)
     audit.add_argument("--ledger", required=True)
     audit.add_argument("--out", required=True)
+    refresh = commands.add_parser("refresh", help="immutable incremental CSV snapshot with overlap checks")
+    refresh.add_argument("--previous-dir", required=True, help="prior complete manifest-based input")
+    refresh.add_argument("--out-dir", required=True, help="new directory, never overwritten")
+    refresh.add_argument("--end", required=True, help="YYYYMMDD end date")
+    refresh.add_argument("--overlap-days", type=int, default=21)
+    refresh.add_argument("--delay-seconds", type=float, default=2.0)
+    refresh.add_argument("--source-terms-confirmed", action="store_true")
     args = parser.parse_args()
-    if args.command == "audit-eligibility":
+    if args.command == "refresh":
+        result = refresh_snapshot(
+            previous_dir=args.previous_dir, out_dir=args.out_dir,
+            end=args.end, overlap_calendar_days=args.overlap_days,
+            delay_seconds=args.delay_seconds,
+            source_terms_confirmed=args.source_terms_confirmed)
+    elif args.command == "audit-eligibility":
         histories = {}
         for source in sorted(Path(args.input_dir).glob("*.csv")):
             bars = load_csv(source)
