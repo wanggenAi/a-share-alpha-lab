@@ -42,6 +42,7 @@ def main() -> None:
     cockpit.add_argument("--scan", required=True)
     cockpit.add_argument("--holdings", required=True)
     cockpit.add_argument("--previous", help="optional earlier local cockpit JSON")
+    cockpit.add_argument("--fundamentals", help="optional local dated filing evidence JSON")
     cockpit.add_argument("--out", required=True)
     cockpit.add_argument("--markdown", required=True)
     args = parser.parse_args()
@@ -59,10 +60,13 @@ def main() -> None:
         inputs = [Path(args.scan), Path(args.holdings)]
         if args.previous:
             inputs.append(Path(args.previous))
+        if args.fundamentals:
+            inputs.append(Path(args.fundamentals))
         if outputs[0].resolve() == outputs[1].resolve() or any(
                 x.resolve() in {p.resolve() for p in inputs} for x in outputs):
             raise ValueError("OUTPUT_MUST_NOT_OVERWRITE_INPUT")
-        result = build_from_files(args.scan, args.holdings, args.previous)
+        result = build_from_files(args.scan, args.holdings, args.previous,
+                                  args.fundamentals)
         for path in outputs:
             path.parent.mkdir(parents=True, exist_ok=True)
         outputs[0].write_text(json.dumps(result, indent=2, ensure_ascii=False),

@@ -99,3 +99,25 @@ The `--previous` input must point to an earlier local cockpit; archive it
 before overwriting. No market-wide coverage, fundamental research, adjusted
 total-return series, broker reconciliation or execution is provided.
 **Keep all position information and cockpit outputs out of this public repo.**
+
+## V0.5 dated fundamental evidence (offline/manual)
+
+For an optional dated financial source, create local `data/fundamentals.json`
+using `config/fundamentals.SYNTHETIC.example.json` **only as schema guidance**;
+the example has fabricated figures and links, deliberately NOT real issuer data.
+Run with `alpha-lab cockpit ... --fundamentals data/fundamentals.json`.
+
+Inputs explicitly distinguish `fiscal_end` from `published_at`: a filing
+is unavailable to earlier snapshots even if it covers an earlier period.
+All figures use **CNY yuan**, with `FY`, `Q1`, `H1`, or `9M` reporting
+periods. Similar-period prior-year revenue/profit comparisons are made only
+when both dated filings were available as-of. Reported cash conversion,
+liability ratio, and optional **FY-only** PE/PB are *descriptive review metrics*.
+No forward-filled filings, guesswork for missing values, TTM inference,
+corporate-action restatements, or independent link/content verification.
+Negative-profit PE and missing valuation information remain unknown.
+
+**Review flags are not company ratings**. The financial source URLs and
+the user-supplied figures are *declared*, not verified by this program;
+verify against primary exchange/issuer filings and relevant accounting units
+before any real investment decision. Never use synthetic example amounts for investing.
