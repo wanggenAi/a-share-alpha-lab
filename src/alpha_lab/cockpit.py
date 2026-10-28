@@ -92,8 +92,14 @@ def _clean_scan(scan: dict) -> tuple[str, dict[str, dict], int]:
 
 
 def build_cockpit(scan: dict, holdings: dict, previous: dict | None = None,
-                  fundamentals: dict | None = None) -> dict:
+                  fundamentals: dict | None = None,
+                  market_radar: dict | None = None) -> dict:
     asof, indexed, max_age = _clean_scan(scan)
+    if market_radar is not None and (
+            not isinstance(market_radar, dict)
+            or market_radar.get("status") != "LOCAL_INDEX_TECHNICAL_CONTEXT_ONLY"
+            or market_radar.get("asof") != asof):
+        raise ValueError("MARKET_RADAR_ASOF_MISMATCH")
     positions, cash = validate_holdings(holdings, asof)
     reference_prices = {
         symbol: price for symbol, row in indexed.items()
@@ -200,12 +206,13 @@ def build_cockpit(scan: dict, holdings: dict, previous: dict | None = None,
         else "UNKNOWN_INCOMPLETE_VALUATION"
     )
     return {
-        "schema_version": "0.5",
+        "schema_version": "0.8",
         "status": "RESEARCH_COCKPIT",
         "generated_at_utc": datetime.now(timezone.utc).isoformat(),
         "asof": asof,
         "investment_decision_status": "HUMAN_REVIEW_REQUIRED_NOT_A_BUY_OR_SELL_SIGNAL",
         "holdings": valued,
+        "market_radar": market_radar,
         "candidates": candidates,
         "summary": {
             "positions": len(valued),
@@ -221,7 +228,9 @@ def build_cockpit(scan: dict, holdings: dict, previous: dict | None = None,
             ),
             "concentration_30pct_flag": concentration_flag,
             "universe_coverage": "ONLY_USER_SUPPLIED_LOCAL_CSV_FILES",
-            "market_cycle_radar": "UNAVAILABLE_WITHOUT_VERIFIED_BENCHMARK_DATA",
+            "market_cycle_radar": (
+                market_radar["technical_summary"] if market_radar is not None
+                else "UNAVAILABLE_WITHOUT_VERIFIED_BENCHMARK_DATA"),
         },
         "limitations": [
             "private_positions_local_only_do_not_publish",
@@ -230,6 +239,7 @@ def build_cockpit(scan: dict, holdings: dict, previous: dict | None = None,
             "no_fees_dividends_taxes_or_fx_in_marked_values",
             "manual_financial_data_unverified_and_not_market_wide",
             "fiscal_period_and_publication_date_are_distinct",
+            "benchmark_trend_is_not_economic_cycle_forecast",
             "all_actions_are_review_labels_not_trade_instructions",
         ],
     }
@@ -275,11 +285,15 @@ def render_cockpit(report: dict) -> str:
 
 def build_from_files(scan_path: str | Path, holdings_path: str | Path,
                      previous_path: str | Path | None = None,
-                     fundamentals_path: str | Path | None = None) -> dict:
+                     fundamentals_path: str | Path | None = None,
+                     market_radar_path: str | Path | None = None) -> dict:
     scan = json.loads(Path(scan_path).read_text(encoding="utf-8"))
     holdings = json.loads(Path(holdings_path).read_text(encoding="utf-8"))
     prior = (json.loads(Path(previous_path).read_text(encoding="utf-8"))
              if previous_path is not None else None)
     financial = (json.loads(Path(fundamentals_path).read_text(encoding="utf-8"))
                  if fundamentals_path is not None else None)
-    return build_cockpit(scan, holdings, previous=prior, fundamentals=financial)
+    market = (json.loads(Path(market_radar_path).read_text(encoding="utf-8"))
+              if market_radar_path is not None else None)
+    return build_cockpit(scan, holdings, previous=prior,
+                         fundamentals=financial, market_radar=market)

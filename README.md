@@ -171,3 +171,24 @@ remains **unadjusted, opt-in and unscheduled**. AKShare is an optional dependenc
 (`pip install -e ".[data]"`), not a guaranteed or licensed market-data
 subscription. This is NOT point-in-time verified historical fundamental data
 and is not a substitute for proper adjusted data/benchmark validation.
+
+## V0.8 optional benchmark-index technical radar
+
+If you have **permissioned locally verified index data** in the same
+`symbol,date,open,high,low,close,volume` CSV format, put one index per file
+in `data/benchmarks/` (1–10 files). Then:
+
+```bash
+alpha-lab radar --input-dir data/benchmarks --asof 2026-10-28 \
+  --out output/radar.json
+
+alpha-lab run --input-dir data/prices --asof 2026-10-28 \
+  --holdings data/holdings.json --benchmark-dir data/benchmarks \
+  --out-dir output/2026-10-28
+```
+
+The HTML dashboard will show how many supplied indices exhibit rising,
+falling, or mixed MA20/MA60 technical trends. If any input index is stale or
+blocked, the **aggregate trend is unavailable**. It does not scrape indices,
+verify ticker names, infer industry rotation or predict an economic cycle.
+An arbitrary sample of 1–10 indices must not be described as market-wide breadth.
