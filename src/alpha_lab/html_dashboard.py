@@ -40,6 +40,48 @@ def _table(headers: list[str], rows: list[list[object]], empty: str) -> str:
     return "<div class='table-wrap'><table><thead><tr>" + header + "</tr></thead><tbody>" + body + "</tbody></table></div>"
 
 
+def _experimental_portfolio_view(report: dict) -> str:
+    """Price-only simulation line is numeric and never plotted as live returns."""
+    experiment = report.get("portfolio_experiment")
+    if experiment is None:
+        return ""
+    metrics = experiment["metrics"]
+    points = experiment["daily_equity"]
+    # Rendering downsampling; the full observations remain in local JSON.
+    selected = points[::max(1, len(points) // 120)]
+    if selected[-1] is not points[-1]:
+        selected.append(points[-1])
+    values = [float(p["equity"]) for p in selected]
+    low, high = min(values), max(values)
+    spread = high - low or 1.0
+    max_x = max(len(values)-1, 1)
+    coords = " ".join(
+        f"{15 + i * 770 / max_x:.2f},{150 - (v-low) * 135/spread:.2f}"
+        for i, v in enumerate(values))
+    svg = ("<svg viewBox='0 0 800 165' role='img' "
+           "aria-label='历史假设权益变化曲线，不是实盘收益' "
+           "style='width:100%;max-height:230px;overflow:visible'>"
+           "<polyline fill='none' stroke='#3571bc' stroke-width='2' "
+           "points='" + coords + "'/></svg>")
+    rows = [[p["date"], p["equity"], p["drawdown_pct"]]
+            for p in points[-12:]]
+    return (
+        "<section><h2>历史模拟组合研究｜不是实际持仓</h2>"
+        "<p class='warning'>模型假设的历史成交与权益曲线，不代表可实现的实盘收益。</p>"
+        "<div class='grid'>"
+        "<div class='metric'><span class='label'>模拟收益率 %</span><strong>"
+        + safe(metrics["total_marked_return_pct"])
+        + "</strong></div><div class='metric'><span class='label'>模拟最大回撤 %</span><strong>"
+        + safe(metrics["max_marked_drawdown_pct"])
+        + "</strong></div><div class='metric'><span class='label'>已平仓模拟交易</span><strong>"
+        + safe(metrics["closed_trade_count"])
+        + "</strong></div></div>" + svg
+        + _table(["研究日期", "模拟组合权益", "模拟回撤 %"], rows, "暂无模拟记录")
+        + "<p class='small'>研究仅使用原始日线和简化交易规则。"
+        "未处理完整公司行动、ST 状态、退市样本、真实成交或样本外有效性。</p></section>"
+    )
+
+
 def render_html(report: dict) -> str:
     """Render only a canonical cockpit snapshot. Does not calculate investment signals."""
     if report.get("status") != "RESEARCH_COCKPIT":
@@ -120,7 +162,8 @@ def render_html(report: dict) -> str:
         + _table(["代码","首次观察","当前研究状态","参考价","财报状态","行情来源","原因"],
                  candidates, "暂无合格候选记录")
         + "<p class='small'>长期候选不会仅因一天未触发技术条件就被删除。</p></section>"
-        "<section><h2>风险与市场周期</h2><p>集中度："
+        + _experimental_portfolio_view(report)
+        + "<section><h2>风险与市场周期</h2><p>集中度："
         + safe(s["concentration_30pct_flag"]) + "</p><p>市场周期："
         + safe(s["market_cycle_radar"]) + "</p>" + radar_table + "</section>"
         "<section><h2>证据限制与待核实项</h2><ul>" + limitations + "</ul>"
