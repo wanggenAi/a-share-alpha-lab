@@ -121,3 +121,28 @@ Negative-profit PE and missing valuation information remain unknown.
 the user-supplied figures are *declared*, not verified by this program;
 verify against primary exchange/issuer filings and relevant accounting units
 before any real investment decision. Never use synthetic example amounts for investing.
+
+## V0.6 open the local HTML investment research cockpit
+
+Once you have actual **permitted, user-verified daily CSV inputs** in
+`data/prices/`, and a local `data/holdings.json` for the same as-of date,
+generate a whole, immutable private snapshot in **one command**:
+
+```bash
+alpha-lab run --input-dir data/prices --asof 2026-10-28 \
+  --holdings data/holdings.json --out-dir output/2026-10-28 \
+  --fundamentals data/fundamentals.json
+```
+
+The optional `--fundamentals` argument may be omitted. Open
+`output/2026-10-28/cockpit.html` locally in a browser. Also produced:
+`scan.json`, `cockpit.json`, `cockpit.md`. The output directory **must not
+already exist**: this prevents silent edits to archived decisions.
+For the following day's snapshot, pass
+`--previous output/2026-10-28/cockpit.json`, use the following date's holdings
+and input CSVs, and choose a new output directory. Save historical snapshots.
+
+HTML is local-only and embeds no remote scripts/assets or account integrations;
+all user/data text is escaped. It is NOT a live hosted financial app, and it
+does not fetch current market/issuer data or execute orders. The above commands
+are procedural examples, NOT evidence that 2026-10-28 market feeds were loaded.
