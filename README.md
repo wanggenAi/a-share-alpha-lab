@@ -372,3 +372,29 @@ No hourly job has been enabled. An operator must still provide actual authorized
 data access and test provider reliability before unattended scheduling. Neither
 the daily data nor this refresh is a real-time price feed or PIT total-return
 database.
+
+## V0.15 read-only data-health preflight
+
+A running research system needs explicit freshness and failure signals. Before
+using a locally downloaded or incrementally refreshed market batch:
+
+```bash
+alpha-lab health --input-dir data/2026-10-28-prices \
+  --asof 2026-10-28 --max-bar-age-days 5 \
+  --max-fetch-age-hours 24 --fail-on-blocked \
+  --out output/health-2026-10-28.json
+```
+
+This checks complete SHA256 batch manifest, all symbol CSVs, last observed
+date, at least 65 sessions, recent zero volume, inconsistent last session
+dates and retrieval timestamps. The output is a structured report containing
+every blocking reason and each symbol's observation count and last date.
+`--fail-on-blocked` writes the diagnostic JSON first, then returns exit
+code 2 on any failed preflight; useful for *future opt-in schedulers*.
+A zero-issue status means **ready for offline technical research only**,
+never that the issuer status, dividends, provider rights or strategies are
+independently verified.
+
+No scheduler, background monitoring or notification has been activated.
+The job can be inspected manually and connected only after a real provider
+integration, data rights, retention and operational checks are resolved.

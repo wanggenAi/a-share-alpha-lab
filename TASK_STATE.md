@@ -23,6 +23,7 @@ data collection. This is decision support, **not an autonomous brokerage bot**.
 - V0.12 optional manually dispatched PUBLIC ticker research workflow with terms acknowledgement, strict limited inputs and a short-retention artifact; no private holdings or cron.
 - V0.13 opt-in per-session as-known-before-preopen trading-status/corporate-action audit and strict fail-closed portfolio gates, with **declared-unverified** source classification.
 - V0.14 immutable incremental daily CSV refresh with bounded overlap checks, lineage hashes, partial-batch gating and opt-in data-rights confirmation.
+- V0.15 read-only local batch health diagnostics with timestamps, historical date coverage, manifest hashes and optional failing exit code for blocked data; no scheduler enabled.
 
 ## Important constraints
 - Repo is PUBLIC. Never commit local `data/`, `output/`, positions, API keys or paid datasets.
