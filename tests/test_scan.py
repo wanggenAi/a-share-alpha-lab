@@ -55,7 +55,8 @@ def test_invalid_and_duplicate_files_explicitly_rejected(tmp_path):
 def test_insufficient_bars_and_zero_volume():
     bars = sample_bars()
     asof = date.fromisoformat(bars[-1].date)
-    short = analyze_bars(bars[:60], source="short.csv", asof=asof)
+    short = analyze_bars(bars[:60], source="short.csv",
+                         asof=date.fromisoformat(bars[59].date))
     assert short["reason"] == "INSUFFICIENT_BARS_MIN_65"
     last = bars[-1]
     zero = bars[:-1] + [Bar(last.symbol, last.date, last.open, last.high,
