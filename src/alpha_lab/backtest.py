@@ -31,7 +31,8 @@ def _locked(bar: Bar, prior_close: float, direction: str, limit: float) -> bool:
     )
 
 
-def research_backtest(bars: list[Bar], cfg: Assumptions = Assumptions()) -> dict:
+def research_backtest(bars: list[Bar], cfg: Assumptions = Assumptions(),
+                      *, signal_start: str | None = None) -> dict:
     validate_bars(bars)
     if not (
         cfg.capital_per_trade > 0
@@ -41,10 +42,22 @@ def research_backtest(bars: list[Bar], cfg: Assumptions = Assumptions()) -> dict
         and 0 <= cfg.one_way_slippage < 1
     ):
         raise ValueError("INVALID_BACKTEST_ASSUMPTIONS")
+    if signal_start is not None:
+        from datetime import date
+        try:
+            parsed = date.fromisoformat(signal_start)
+            if parsed.isoformat() != signal_start:
+                raise ValueError
+        except ValueError as exc:
+            raise ValueError("INVALID_SIGNAL_START") from exc
     trades: list[dict] = []
     censored = 0
     i = 64
     while i < len(bars) - 1:
+        # The earlier history warms up indicators but cannot create in-sample trades.
+        if signal_start is not None and bars[i].date < signal_start:
+            i += 1
+            continue
         signal = detect(bars[: i + 1])
         if signal is None:
             i += 1
@@ -118,6 +131,7 @@ def research_backtest(bars: list[Bar], cfg: Assumptions = Assumptions()) -> dict
         "symbol": bars[0].symbol,
         "data_start": bars[0].date,
         "data_end": bars[-1].date,
+        "signal_start": signal_start,
         "strategy": "trend_pullback_v01",
         "assumptions": asdict(cfg),
         "limitations": [
