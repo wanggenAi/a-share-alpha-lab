@@ -66,3 +66,36 @@ Statistics are descriptive, **not** statistically significant evidence of edge.
 The passive close-change is a *reference*, not a total-return benchmark.
 This fixed-rule run is **not fitting/re-optimizing a model** and does not
 address survivorship bias, corporate actions or point-in-time universes.
+
+## V0.4 local holdings + persistent research cockpit
+
+Private input `data/holdings.json` (LOCAL ONLY — NOT in GitHub):
+
+```json
+{
+  "asof": "2026-10-28",
+  "cash": 1000,
+  "positions": [
+    {"symbol": "600519", "shares": 100, "cost_basis_per_share": 10}
+  ]
+}
+```
+
+**The numbers above are a synthetic schema example, NOT actual market prices or positions.**
+
+```bash
+alpha-lab cockpit --scan output/scan.json --holdings data/holdings.json \
+  --out output/cockpit.json --markdown output/cockpit.md
+# For next as-of report, preserve candidates using:
+alpha-lab cockpit --scan output/next_scan.json --holdings data/next_holdings.json \
+  --previous output/cockpit.json --out output/next_cockpit.json \
+  --markdown output/next_cockpit.md
+```
+
+The cockpit shows local holdings with marked values *only when every holding
+has a usable price*, review-only action labels, a 30%-weight concentration
+flag, and a candidate queue that does not vanish when a technical setup expires.
+The `--previous` input must point to an earlier local cockpit; archive it
+before overwriting. No market-wide coverage, fundamental research, adjusted
+total-return series, broker reconciliation or execution is provided.
+**Keep all position information and cockpit outputs out of this public repo.**
