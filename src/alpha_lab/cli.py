@@ -14,6 +14,7 @@ from .cockpit import build_from_files, render_cockpit
 from .pipeline import run_local_pipeline
 from .ingestion import batch_ingest
 from .refresh import refresh_snapshot
+from .health import check_snapshot_health
 from .market_radar import build_market_radar
 from .tradability import audit_eligibility_file
 from .portfolio import PortfolioRules, portfolio_from_directory
@@ -110,8 +111,26 @@ def main() -> None:
     refresh.add_argument("--overlap-days", type=int, default=21)
     refresh.add_argument("--delay-seconds", type=float, default=2.0)
     refresh.add_argument("--source-terms-confirmed", action="store_true")
+    health = commands.add_parser("health", help="check CSV batch integrity, provenance and freshness")
+    health.add_argument("--input-dir", required=True)
+    health.add_argument("--asof", required=True, help="YYYY-MM-DD research date")
+    health.add_argument("--max-bar-age-days", type=int, default=5)
+    health.add_argument("--max-fetch-age-hours", type=int, default=24)
+    health.add_argument("--out", required=True)
+    health.add_argument("--fail-on-blocked", action="store_true",
+                        help="exit 2 after saving the report if data are not ready")
     args = parser.parse_args()
-    if args.command == "refresh":
+    if args.command == "health":
+        result = check_snapshot_health(
+            args.input_dir, asof=args.asof,
+            max_bar_age_days=args.max_bar_age_days,
+            max_fetch_age_hours=args.max_fetch_age_hours)
+        target = Path(args.out)
+        if target.exists() or target.resolve().is_relative_to(Path(args.input_dir).resolve()):
+            raise ValueError("HEALTH_OUTPUT_MUST_BE_NEW_AND_OUTSIDE_INPUT")
+        target.parent.mkdir(parents=True, exist_ok=True)
+        target.write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")
+    elif args.command == "refresh":
         result = refresh_snapshot(
             previous_dir=args.previous_dir, out_dir=args.out_dir,
             end=args.end, overlap_calendar_days=args.overlap_days,
@@ -240,6 +259,9 @@ def main() -> None:
             raise ValueError("FEEDS_CONFIG_MUST_BE_URL_LIST")
         result = poll_feeds(sources, args.out)
     print(json.dumps(result, ensure_ascii=False, indent=2))
+    if (args.command == "health" and args.fail_on_blocked
+            and result["status"] != "READY_FOR_OFFLINE_TECHNICAL_RESEARCH_ONLY"):
+        raise SystemExit(2)
 
 
 if __name__ == "__main__":
