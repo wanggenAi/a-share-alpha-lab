@@ -146,3 +146,28 @@ HTML is local-only and embeds no remote scripts/assets or account integrations;
 all user/data text is escaped. It is NOT a live hosted financial app, and it
 does not fetch current market/issuer data or execute orders. The above commands
 are procedural examples, NOT evidence that 2026-10-28 market feeds were loaded.
+
+## V0.7 bounded opt-in batch market data input
+
+Prepare an **untracked local** `data/symbols.json`, for example
+`["600519", "000001"]` (these are ticker **identifiers**, not stock picks).
+
+After *you* have reviewed AKShare/upstream provider access terms:
+
+```bash
+alpha-lab ingest --symbols data/symbols.json --start 20220101 --end 20261028 \
+  --out-dir data/2026-10-28-prices --source-terms-confirmed
+```
+
+Only up to 30 explicit symbols per call; minimum 0.5 second interval,
+default 2 seconds. Each new snapshot has CSVs and a local SHA256 manifest
+with requested symbols, retrieval time, source label and any failures.
+**PARTIAL_BLOCKED** manifest prevents the scanner from silently accepting
+an incomplete batch. Tampered or additional/missing files are detected.
+Unmanaged legacy CSV files remain usable but are visibly labeled unverified.
+
+Use `--input-dir data/2026-10-28-prices` in `alpha-lab run`. The downloader
+remains **unadjusted, opt-in and unscheduled**. AKShare is an optional dependency
+(`pip install -e ".[data]"`), not a guaranteed or licensed market-data
+subscription. This is NOT point-in-time verified historical fundamental data
+and is not a substitute for proper adjusted data/benchmark validation.
