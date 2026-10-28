@@ -1,0 +1,35 @@
+{
+  "schema_version": "1",
+  "records": [
+    {
+      "symbol": "600519",
+      "fiscal_end": "2024-12-31",
+      "period_kind": "FY",
+      "published_at": "2025-04-01",
+      "source_url": "https://example.com/illustration-2024.pdf",
+      "currency": "CNY",
+      "revenue_yuan": 100,
+      "net_income_yuan": 20,
+      "operating_cash_flow_yuan": 25,
+      "total_assets_yuan": 500,
+      "total_liabilities_yuan": 200,
+      "shareholders_equity_yuan": 300,
+      "shares_outstanding": 100
+    },
+    {
+      "symbol": "600519",
+      "fiscal_end": "2025-12-31",
+      "period_kind": "FY",
+      "published_at": "2026-04-01",
+      "source_url": "https://example.com/illustration-2025.pdf",
+      "currency": "CNY",
+      "revenue_yuan": 120,
+      "net_income_yuan": 21,
+      "operating_cash_flow_yuan": 23,
+      "total_assets_yuan": 550,
+      "total_liabilities_yuan": 220,
+      "shareholders_equity_yuan": 330,
+      "shares_outstanding": 100
+    }
+  ]
+}

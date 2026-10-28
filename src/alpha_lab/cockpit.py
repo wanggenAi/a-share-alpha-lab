@@ -11,6 +11,8 @@ from collections import Counter
 from datetime import date, datetime, timezone
 from pathlib import Path
 
+from .fundamentals import research_financial_evidence
+
 
 def _iso(value: object) -> str:
     if not isinstance(value, str):
@@ -89,9 +91,17 @@ def _clean_scan(scan: dict) -> tuple[str, dict[str, dict], int]:
     return asof, indexed, max_age
 
 
-def build_cockpit(scan: dict, holdings: dict, previous: dict | None = None) -> dict:
+def build_cockpit(scan: dict, holdings: dict, previous: dict | None = None,
+                  fundamentals: dict | None = None) -> dict:
     asof, indexed, max_age = _clean_scan(scan)
     positions, cash = validate_holdings(holdings, asof)
+    reference_prices = {
+        symbol: price for symbol, row in indexed.items()
+        if (price := _quote(row, max_age=max_age)) is not None
+    }
+    financial = (research_financial_evidence(fundamentals, asof=asof,
+                                            reference_prices=reference_prices)
+                 if fundamentals is not None else {})
     history = {}
     if previous is not None:
         if not isinstance(previous, dict) or previous.get("status") != "RESEARCH_COCKPIT":
@@ -133,6 +143,12 @@ def build_cockpit(scan: dict, holdings: dict, previous: dict | None = None) -> d
             "latest_reference_close": price,
             "evidence_source": row.get("source") if row else None,
             "reason": row.get("reason") if row else "MISSING_FROM_CURRENT_SCAN",
+            "financial_status": (financial[symbol]["status"]
+                                 if symbol in financial else "UNKNOWN_NO_FILING_INPUT"),
+            "financial_metrics": (financial[symbol]["metrics"]
+                                  if symbol in financial else {}),
+            "financial_source_url": (financial[symbol]["source_url"]
+                                     if symbol in financial else None),
         })
 
     valued = []
@@ -160,6 +176,12 @@ def build_cockpit(scan: dict, holdings: dict, previous: dict | None = None) -> d
             "research_action": action,
             "evidence_source": row.get("source") if row else None,
             "data_date": row.get("latest_date") if row else None,
+            "financial_status": (financial[p["symbol"]]["status"]
+                                 if p["symbol"] in financial else "UNKNOWN_NO_FILING_INPUT"),
+            "financial_metrics": (financial[p["symbol"]]["metrics"]
+                                  if p["symbol"] in financial else {}),
+            "financial_source_url": (financial[p["symbol"]]["source_url"]
+                                     if p["symbol"] in financial else None),
         })
     complete = all(p["market_value_excluding_fees"] is not None for p in valued)
     # Never publish a partial portfolio as a full valuation.
@@ -178,7 +200,7 @@ def build_cockpit(scan: dict, holdings: dict, previous: dict | None = None) -> d
         else "UNKNOWN_INCOMPLETE_VALUATION"
     )
     return {
-        "schema_version": "0.4",
+        "schema_version": "0.5",
         "status": "RESEARCH_COCKPIT",
         "generated_at_utc": datetime.now(timezone.utc).isoformat(),
         "asof": asof,
@@ -187,6 +209,8 @@ def build_cockpit(scan: dict, holdings: dict, previous: dict | None = None) -> d
         "candidates": candidates,
         "summary": {
             "positions": len(valued),
+            "financial_evidence_count": len(financial),
+            "financial_source_verification": "DECLARED_NOT_INDEPENDENTLY_VERIFIED",
             "candidate_count": len(candidates),
             "unvalued_positions": sum(p["reference_close"] is None for p in valued),
             "cash_from_user_input": cash,
@@ -204,7 +228,8 @@ def build_cockpit(scan: dict, holdings: dict, previous: dict | None = None) -> d
             "unadjusted_prices_may_distort_profit_loss_across_corporate_actions",
             "cost_basis_and_cash_are_user_supplied_not_broker_reconciled",
             "no_fees_dividends_taxes_or_fx_in_marked_values",
-            "no_market_wide_or_fundamental_coverage",
+            "manual_financial_data_unverified_and_not_market_wide",
+            "fiscal_period_and_publication_date_are_distinct",
             "all_actions_are_review_labels_not_trade_instructions",
         ],
     }
@@ -220,24 +245,26 @@ def render_cockpit(report: dict) -> str:
         f'· Unpriced positions: {s["unvalued_positions"]}', "",
         f'Portfolio value (excluding fees): {s["portfolio_marked_value_excluding_fees"]}',
         f'Unrealized P/L (excluding fees): {s["portfolio_unrealized_pnl_excluding_fees"]}',
-        f'Risk flag: {s["concentration_30pct_flag"]}', "",
+        f'Risk flag: {s["concentration_30pct_flag"]}',
+        f'Financial filings as-of (declared only): {s["financial_evidence_count"]}', "",
         "## Position research actions", "",
-        "| Ticker | Shares | Reference price | Weight % | Review state | Evidence |",
-        "|---|---:|---:|---:|---|---|",
+        "| Ticker | Shares | Reference price | Weight % | Review state | Financial | Price source |",
+        "|---|---:|---:|---:|---|---|---|",
     ]
     esc = lambda value: str(value if value is not None else "—").replace("|", "/").replace("\n", " ")
     for p in report["holdings"]:
         lines.append("| " + " | ".join(esc(x) for x in (
             p["symbol"], p["shares"], p["reference_close"],
-            p["portfolio_weight_pct"], p["research_action"], p["evidence_source"],
+            p["portfolio_weight_pct"], p["research_action"], p["financial_status"],
+            p["evidence_source"],
         )) + " |")
     lines += ["", "## Persistent candidate queue", "",
-              "| Ticker | First seen | Current state | Source | Reason |",
-              "|---|---|---|---|---|"]
+              "| Ticker | First seen | Current state | Financial | Source | Reason |",
+              "|---|---|---|---|---|---|"]
     for c in report["candidates"]:
         lines.append("| " + " | ".join(esc(x) for x in (
             c["symbol"], c["first_seen_asof"], c["research_state"],
-            c["evidence_source"], c["reason"],
+            c["financial_status"], c["evidence_source"], c["reason"],
         )) + " |")
     lines += ["", "## Market and cycle radar", "",
               s["market_cycle_radar"], "", "## Limitations", ""]
@@ -247,9 +274,12 @@ def render_cockpit(report: dict) -> str:
 
 
 def build_from_files(scan_path: str | Path, holdings_path: str | Path,
-                     previous_path: str | Path | None = None) -> dict:
+                     previous_path: str | Path | None = None,
+                     fundamentals_path: str | Path | None = None) -> dict:
     scan = json.loads(Path(scan_path).read_text(encoding="utf-8"))
     holdings = json.loads(Path(holdings_path).read_text(encoding="utf-8"))
     prior = (json.loads(Path(previous_path).read_text(encoding="utf-8"))
              if previous_path is not None else None)
-    return build_cockpit(scan, holdings, previous=prior)
+    financial = (json.loads(Path(fundamentals_path).read_text(encoding="utf-8"))
+                 if fundamentals_path is not None else None)
+    return build_cockpit(scan, holdings, previous=prior, fundamentals=financial)

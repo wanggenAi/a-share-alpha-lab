@@ -13,6 +13,7 @@ data collection. This is decision support, **not an autonomous brokerage bot**.
 - V0.2 local multi-ticker CSV scanning and canonical JSON + Markdown report, fail-closed data screening.
 - V0.3 chronological fixed-rule holdout experiments (non-overlapping windows, no future signals).
 - V0.4 local holdings, concentration review, persistent research candidates and unified offline cockpit.
+- V0.5 optional dated, manually declared filing evidence with as-of publication guards and cash-flow / debt / comparable-period metrics.
 
 ## Important constraints
 - Repo is PUBLIC. Never commit local `data/`, `output/`, positions, API keys or paid datasets.
@@ -25,8 +26,8 @@ data collection. This is decision support, **not an autonomous brokerage bot**.
 
 ## Next priority gates (do not skip)
 1. Data provenance schema and persistent local storage; true trading calendar and PIT corporate actions.
-2. PIT fundamental filing ingestion: publication time vs effective accounting period, net profit,
-   operating cash flow, debt, dilution, valuation; missing evidence clearly `UNKNOWN`.
+2. Authenticate PIT issuer filings (not only user-declared URLs/figures), handle corrections,
+   true units, consolidated reporting, share dilution and annual/cumulative comparability.
 3. Adjusted-data portfolio backtest with cash/equity curve, benchmarks and realistic session limits;
    independent holdout across PIT universe incl. delistings.
 4. Opt-in verifiable sources, rate limits/retention, ingestion monitoring and safe scheduler
