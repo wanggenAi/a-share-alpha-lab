@@ -14,6 +14,7 @@ from .cockpit import build_from_files, render_cockpit
 from .pipeline import run_local_pipeline
 from .ingestion import batch_ingest
 from .market_radar import build_market_radar
+from .tradability import audit_eligibility_file
 from .portfolio import PortfolioRules, portfolio_from_directory
 from .portfolio_evaluation import portfolio_folds_from_directory
 
@@ -60,6 +61,7 @@ def main() -> None:
     one.add_argument("--fundamentals", help="optional dated financial filings JSON")
     one.add_argument("--benchmark-dir", help="optional local benchmark index CSV directory")
     one.add_argument("--portfolio-first-trade-date", help="optional hypothetical portfolio start date")
+    one.add_argument("--eligibility-ledger", help="optional private daily as-known trading-state JSON")
     one.add_argument("--portfolio-starting-cash", type=float, default=100000.0)
     one.add_argument("--portfolio-max-positions", type=int, default=5)
     one.add_argument("--portfolio-allocation-fraction", type=float, default=0.20)
@@ -85,6 +87,7 @@ def main() -> None:
     portfolio.add_argument("--max-positions", type=int, default=5)
     portfolio.add_argument("--allocation-fraction", type=float, default=0.2)
     portfolio.add_argument("--benchmark-csv", help="local unadjusted price reference only")
+    portfolio.add_argument("--eligibility-ledger", help="optional daily trading eligibility JSON")
     portfolio.add_argument("--out", required=True)
     validation = commands.add_parser("portfolio-evaluate", help="fixed-rule chronological portfolio folds")
     validation.add_argument("--input-dir", required=True)
@@ -93,14 +96,35 @@ def main() -> None:
     validation.add_argument("--starting-cash", type=float, default=100000.0)
     validation.add_argument("--max-positions", type=int, default=5)
     validation.add_argument("--allocation-fraction", type=float, default=0.20)
+    validation.add_argument("--eligibility-ledger", help="optional daily trading eligibility JSON")
     validation.add_argument("--out", required=True)
+    audit = commands.add_parser("audit-eligibility", help="audit as-known per-session trading status")
+    audit.add_argument("--input-dir", required=True)
+    audit.add_argument("--ledger", required=True)
+    audit.add_argument("--out", required=True)
     args = parser.parse_args()
-    if args.command == "portfolio-evaluate":
+    if args.command == "audit-eligibility":
+        histories = {}
+        for source in sorted(Path(args.input_dir).glob("*.csv")):
+            bars = load_csv(source)
+            if bars[0].symbol in histories:
+                raise ValueError("DUPLICATE_ELIGIBILITY_CSV_SYMBOL")
+            histories[bars[0].symbol] = bars
+        result = audit_eligibility_file(histories, args.ledger)
+        output = Path(args.out)
+        if (output.exists()
+                or output.resolve().is_relative_to(Path(args.input_dir).resolve())
+                or output.resolve() == Path(args.ledger).resolve()):
+            raise ValueError("ELIGIBILITY_AUDIT_OUTPUT_MUST_BE_NEW")
+        output.parent.mkdir(parents=True, exist_ok=True)
+        output.write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")
+    elif args.command == "portfolio-evaluate":
         result = portfolio_folds_from_directory(
             args.input_dir, warmup_sessions=args.warmup,
             test_sessions=args.window, starting_cash=args.starting_cash,
             max_positions=args.max_positions,
-            allocation_fraction=args.allocation_fraction)
+            allocation_fraction=args.allocation_fraction,
+            eligibility_ledger=args.eligibility_ledger)
         out = Path(args.out)
         if out.exists() or out.resolve().is_relative_to(Path(args.input_dir).resolve()):
             raise ValueError("PORTFOLIO_EVALUATION_OUTPUT_MUST_BE_NEW_OUTSIDE_INPUT")
@@ -112,7 +136,8 @@ def main() -> None:
                                   max_positions=args.max_positions,
                                   allocation_fraction=args.allocation_fraction)
         result = portfolio_from_directory(args.input_dir, settings,
-                                          benchmark_csv=args.benchmark_csv)
+                                          benchmark_csv=args.benchmark_csv,
+                                          eligibility_ledger=args.eligibility_ledger)
         output = Path(args.out)
         if (output.exists()
                 or output.resolve().is_relative_to(Path(args.input_dir).resolve())
@@ -141,6 +166,7 @@ def main() -> None:
                                     previous_path=args.previous,
                                     benchmark_dir=args.benchmark_dir,
                                     portfolio_first_trade_date=args.portfolio_first_trade_date,
+                                    eligibility_ledger_path=args.eligibility_ledger,
                                     portfolio_starting_cash=args.portfolio_starting_cash,
                                     portfolio_max_positions=args.portfolio_max_positions,
                                     portfolio_allocation_fraction=args.portfolio_allocation_fraction,

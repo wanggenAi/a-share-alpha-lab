@@ -13,6 +13,7 @@ from statistics import mean
 from .data import load_csv
 from .ingestion import check_ingestion_manifest
 from .portfolio import PortfolioRules, simulate_portfolio
+from .tradability import require_eligible_histories
 
 
 def evaluate_portfolio_folds(histories: dict, *, warmup_sessions: int = 120,
@@ -87,7 +88,9 @@ def evaluate_portfolio_folds(histories: dict, *, warmup_sessions: int = 120,
     }
 
 
-def portfolio_folds_from_directory(directory: str | Path, **kwargs) -> dict:
+def portfolio_folds_from_directory(directory: str | Path,
+                                   eligibility_ledger: str | Path | None = None,
+                                   **kwargs) -> dict:
     root = Path(directory)
     if not root.is_dir():
         raise ValueError("PORTFOLIO_DIRECTORY_NOT_FOUND")
@@ -101,7 +104,13 @@ def portfolio_folds_from_directory(directory: str | Path, **kwargs) -> dict:
         if bars[0].symbol in histories:
             raise ValueError("DUPLICATE_PORTFOLIO_SYMBOL")
         histories[bars[0].symbol] = bars
+    eligibility = (require_eligible_histories(histories, eligibility_ledger)
+                   if eligibility_ledger is not None else None)
     report = evaluate_portfolio_folds(histories, **kwargs)
+    report["tradability_evidence"] = (
+        {"status": eligibility["status"], "required_sessions": eligibility["required_sessions"],
+         "source_verification": eligibility["source_verification"]}
+        if eligibility else {"status": "NOT_PROVIDED_UNVERIFIED"})
     report["input_provenance"] = (
         {"status": manifest["status"], "source": manifest["source"]}
         if manifest else {"status": "UNMANAGED_USER_CSV_UNVERIFIED"})
