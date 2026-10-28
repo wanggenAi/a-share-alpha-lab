@@ -19,6 +19,7 @@ data collection. This is decision support, **not an autonomous brokerage bot**.
 - V0.8 optional local benchmark-index technical trend context in the unified cockpit.
 - V0.9 experimental multi-symbol portfolio cash, marked equity, realized/unrealized P&L, T+1 and order/skip audit ledger with strict aligned-session and price-gap gates.
 - V0.10 optional single-command integration of historical portfolio research into the local HTML cockpit, clearly separated from actual user holdings.
+- V0.11 bounded non-overlapping chronological *fixed-rule* portfolio folds with independent cash/equity accounting and no future-bar leakage assertions.
 
 ## Important constraints
 - Repo is PUBLIC. Never commit local `data/`, `output/`, positions, API keys or paid datasets.
