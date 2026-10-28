@@ -238,3 +238,27 @@ The standalone `alpha-lab cockpit` command accepts
 to executing the simulation in `alpha-lab run`.
 Reports must end on the exact snapshot as-of date; mismatches, invalid equity
 or future-dated simulation results are rejected.
+
+## V0.11 fixed multi-symbol chronological portfolio folds
+
+```bash
+alpha-lab portfolio-evaluate --input-dir data/prices \
+  --warmup 120 --window 60 --starting-cash 100000 \
+  --max-positions 5 --allocation-fraction 0.20 \
+  --out output/portfolio-folds.json
+```
+
+This provides a set of **non-overlapping, independent historical experiments**
+with frozen strategy parameters. Every fold sees only observations through its
+own final session, starts from the same cash balance, uses earlier sessions
+for indicator warmup, and reports its own marked equity curve, drawdown,
+closed trades and open (unliquidated) positions. The mean fold return
+is **not compounded and not annualized**.
+
+This is strictly an additional temporal reliability check, **not** a proven
+investment strategy, not parameter-fitting walk-forward optimization,
+and not a proper investable benchmark comparison. The user-provided ticker
+universe can still exhibit survivorship bias; it lacks point-in-time
+delisting, issuer corporate actions, ST/IPO status and independently
+audited adjusted prices. Never treat non-overlapping folds on a
+hindsight-selected universe as genuine market-wide out-of-sample proof.
