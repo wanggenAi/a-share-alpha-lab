@@ -15,6 +15,7 @@ from .pipeline import run_local_pipeline
 from .ingestion import batch_ingest
 from .market_radar import build_market_radar
 from .portfolio import PortfolioRules, portfolio_from_directory
+from .portfolio_evaluation import portfolio_folds_from_directory
 
 
 def main() -> None:
@@ -85,8 +86,27 @@ def main() -> None:
     portfolio.add_argument("--allocation-fraction", type=float, default=0.2)
     portfolio.add_argument("--benchmark-csv", help="local unadjusted price reference only")
     portfolio.add_argument("--out", required=True)
+    validation = commands.add_parser("portfolio-evaluate", help="fixed-rule chronological portfolio folds")
+    validation.add_argument("--input-dir", required=True)
+    validation.add_argument("--warmup", type=int, default=120)
+    validation.add_argument("--window", type=int, default=60)
+    validation.add_argument("--starting-cash", type=float, default=100000.0)
+    validation.add_argument("--max-positions", type=int, default=5)
+    validation.add_argument("--allocation-fraction", type=float, default=0.20)
+    validation.add_argument("--out", required=True)
     args = parser.parse_args()
-    if args.command == "portfolio":
+    if args.command == "portfolio-evaluate":
+        result = portfolio_folds_from_directory(
+            args.input_dir, warmup_sessions=args.warmup,
+            test_sessions=args.window, starting_cash=args.starting_cash,
+            max_positions=args.max_positions,
+            allocation_fraction=args.allocation_fraction)
+        out = Path(args.out)
+        if out.exists() or out.resolve().is_relative_to(Path(args.input_dir).resolve()):
+            raise ValueError("PORTFOLIO_EVALUATION_OUTPUT_MUST_BE_NEW_OUTSIDE_INPUT")
+        out.parent.mkdir(parents=True, exist_ok=True)
+        out.write_text(json.dumps(result, ensure_ascii=False, indent=2), encoding="utf-8")
+    elif args.command == "portfolio":
         settings = PortfolioRules(starting_cash=args.starting_cash,
                                   first_trade_date=args.first_trade_date,
                                   max_positions=args.max_positions,
