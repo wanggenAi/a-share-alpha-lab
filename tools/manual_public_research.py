@@ -17,7 +17,7 @@ from alpha_lab.scan import render_dashboard, scan_directory
 def parse_symbols(raw: str) -> list[str]:
     symbols = [s.strip() for s in raw.split(",")] if isinstance(raw, str) else []
     if (not 1 <= len(symbols) <= 10 or len(set(symbols)) != len(symbols)
-            or any(not re.fullmatch(r"\d{6}", s) for s in symbols)):
+            or any(not re.fullmatch(r"[0-9]{6}", s) for s in symbols)):
         raise ValueError("INVALID_PUBLIC_SYMBOLS_MAX_10")
     return symbols
 
