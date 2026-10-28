@@ -287,3 +287,56 @@ CI test does **not** prove this manual workflow will fetch current market
 data: provider connectivity, rate limits and access rights must be checked in
 a real manually dispatched workflow run. Running GitHub Actions may consume
 account quota. See the separate private/local cockpit workflow for holdings.
+
+
+## V0.13 opt-in point-in-time **declared** trading-status audit
+
+A research file is not proof that shares were tradable. On your **private
+local** machine, collect exchange/issuer evidence for **every symbol/date**
+in the downloaded OHLCV panel. Keep it under ignored \`data/\`. Example
+**synthetic single session** (NOT a real verified issuer status):
+
+```json
+{
+  "schema_version": "1",
+  "sessions": [
+    {
+      "symbol": "600519",
+      "date": "2025-01-02",
+      "state": "REGULAR",
+      "corporate_action": "NONE_DECLARED",
+      "observed_at": "2025-01-02T09:00:00+08:00",
+      "source_url": "https://example.com/synthetic-status"
+    }
+  ]
+}
+```
+
+A real ledger needs **one record for every stock session** in the input price
+series. For studies, the program requires operator-declared evidence available
+before **09:15 China time** that session. Missing, later-published, ST,
+suspended, delisted or IPO-special statuses, or a declared dividend/split/
+unknown action, block the strict portfolio research. This **does not**
+automatically adjust cash dividends or infer full listing histories.
+It also does NOT certify that the user-declared source URLs are genuine.
+
+```bash
+alpha-lab audit-eligibility --input-dir data/prices \
+  --ledger data/eligibility.json --out output/eligibility-audit.json
+
+alpha-lab portfolio --input-dir data/prices \
+  --first-trade-date 2025-05-08 \
+  --eligibility-ledger data/eligibility.json \
+  --out output/portfolio-gated.json
+
+# Also works for portfolio-evaluate and for alpha-lab run with --portfolio-first-trade-date
+```
+
+**Fail closed**: even one missing/unsafe session blocks portfolio simulation
+when \`--eligibility-ledger\` is supplied. Without a ledger, legacy
+hypothetical reports remain possible but explicitly say
+\`NOT_PROVIDED_UNVERIFIED\`. The audit JSON lists exactly which
+dates/symbols lack or contradict eligibility declarations. A zero-block
+**declared** ledger is not independently source-verified and not investable.
+Any calendar or corporate-action evidence of real trading requires
+verification against authoritative exchange/issuer records.

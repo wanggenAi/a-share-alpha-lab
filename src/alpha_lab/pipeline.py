@@ -19,6 +19,7 @@ def run_local_pipeline(*, input_dir: str | Path, holdings_path: str | Path,
                        previous_path: str | Path | None = None,
                        benchmark_dir: str | Path | None = None,
                        portfolio_first_trade_date: str | None = None,
+                       eligibility_ledger_path: str | Path | None = None,
                        portfolio_starting_cash: float = 100000.0,
                        portfolio_max_positions: int = 5,
                        portfolio_allocation_fraction: float = 0.20,
@@ -32,6 +33,8 @@ def run_local_pipeline(*, input_dir: str | Path, holdings_path: str | Path,
         inputs.append(Path(previous_path).resolve())
     if benchmark_dir is not None:
         inputs.append(Path(benchmark_dir).resolve())
+    if eligibility_ledger_path is not None:
+        inputs.append(Path(eligibility_ledger_path).resolve())
     if dest.exists() or dest in inputs or dest.is_relative_to(inputs[1]):
         raise ValueError("SNAPSHOT_TARGET_EXISTS_OR_COLLIDES_WITH_INPUT")
     scan = scan_directory(input_dir, asof=asof, max_age_days=max_age_days)
@@ -50,7 +53,8 @@ def run_local_pipeline(*, input_dir: str | Path, holdings_path: str | Path,
             starting_cash=portfolio_starting_cash,
             max_positions=portfolio_max_positions,
             allocation_fraction=portfolio_allocation_fraction)
-        experiment = portfolio_from_directory(input_dir, rules)
+        experiment = portfolio_from_directory(input_dir, rules,
+                                               eligibility_ledger=eligibility_ledger_path)
         if experiment["last_session"] != asof:
             raise ValueError("HYPOTHETICAL_PORTFOLIO_ASOF_MISMATCH")
     cockpit = build_cockpit(scan, holdings, previous=previous,

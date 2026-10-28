@@ -21,6 +21,7 @@ data collection. This is decision support, **not an autonomous brokerage bot**.
 - V0.10 optional single-command integration of historical portfolio research into the local HTML cockpit, clearly separated from actual user holdings.
 - V0.11 bounded non-overlapping chronological *fixed-rule* portfolio folds with independent cash/equity accounting and no future-bar leakage assertions.
 - V0.12 optional manually dispatched PUBLIC ticker research workflow with terms acknowledgement, strict limited inputs and a short-retention artifact; no private holdings or cron.
+- V0.13 opt-in per-session as-known-before-preopen trading-status/corporate-action audit and strict fail-closed portfolio gates, with **declared-unverified** source classification.
 
 ## Important constraints
 - Repo is PUBLIC. Never commit local `data/`, `output/`, positions, API keys or paid datasets.
@@ -32,7 +33,7 @@ data collection. This is decision support, **not an autonomous brokerage bot**.
 - Strategy and backtest cannot place orders.
 
 ## Next priority gates (do not skip)
-1. Data provenance schema and persistent local storage; true trading calendar and PIT corporate actions.
+1. Authentic **source-verified** security status (not operator-declared JSON), true exchange calendar and PIT corporate-action adjustments; V0.13 only enforces declared evidence and abstains on missing records.
 2. Authenticate PIT issuer filings (not only user-declared URLs/figures), handle corrections,
    true units, consolidated reporting, share dilution and annual/cumulative comparability.
 3. Adjusted-data portfolio backtest with cash/equity curve, benchmarks and realistic session limits;

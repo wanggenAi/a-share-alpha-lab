@@ -14,6 +14,7 @@ from .backtest import Assumptions, _locked
 from .data import Bar, load_csv, validate_bars
 from .ingestion import check_ingestion_manifest
 from .strategy import detect
+from .tradability import require_eligible_histories
 
 
 @dataclass(frozen=True)
@@ -256,7 +257,8 @@ def simulate_portfolio(histories: dict[str, list[Bar]], rules: PortfolioRules,
 
 def portfolio_from_directory(directory: str | Path, rules: PortfolioRules,
                              costs: Assumptions = Assumptions(),
-                             benchmark_csv: str | Path | None = None) -> dict:
+                             benchmark_csv: str | Path | None = None,
+                             eligibility_ledger: str | Path | None = None) -> dict:
     root = Path(directory)
     if not root.is_dir():
         raise ValueError("PORTFOLIO_DIRECTORY_NOT_FOUND")
@@ -270,8 +272,16 @@ def portfolio_from_directory(directory: str | Path, rules: PortfolioRules,
         if bars[0].symbol in histories:
             raise ValueError("DUPLICATE_PORTFOLIO_SYMBOL")
         histories[bars[0].symbol] = bars
+    eligibility = (require_eligible_histories(histories, eligibility_ledger)
+                   if eligibility_ledger is not None else None)
     benchmark = load_csv(benchmark_csv) if benchmark_csv is not None else None
     result = simulate_portfolio(histories, rules, costs, benchmark=benchmark)
+    result["tradability_evidence"] = (
+        {"status": eligibility["status"],
+         "source_verification": eligibility["source_verification"],
+         "required_sessions": eligibility["required_sessions"],
+         "blocked_sessions": eligibility["blocked_sessions"]}
+        if eligibility else {"status": "NOT_PROVIDED_UNVERIFIED"})
     result["input_provenance"] = (
         {"status": manifest["status"], "source": manifest["source"],
          "retrieved_at_utc": manifest["retrieved_at_utc"]}
