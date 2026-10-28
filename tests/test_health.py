@@ -58,10 +58,10 @@ def test_stale_and_suspended_data_are_reported(tmp_path):
     mfile.write_text(json.dumps(m),encoding="utf-8")
     result=check_snapshot_health(folder,asof="2026-04-12",
         now_utc=datetime(2026,4,12,12,tzinfo=timezone.utc),
-        max_fetch_age_hours=500)
+        max_fetch_age_hours=24)
     reasons={i["reason"] for i in result["issues"]}
     assert "STALE_LAST_BAR" in reasons
-    assert "BATCH_RETRIEVAL_TOO_OLD" is False if False else True
+    assert "BATCH_RETRIEVAL_TOO_OLD" in reasons
 
 
 def test_tamper_is_not_silently_cleared(tmp_path):
