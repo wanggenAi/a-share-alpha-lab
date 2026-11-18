@@ -5,6 +5,7 @@ from datetime import datetime, time, timedelta, timezone
 from pathlib import Path
 import json
 import math
+import time as time_module
 from .cli import CN, query, market_id, funds
 from .activity import five_minute_volume, relative_volume
 
@@ -122,7 +123,10 @@ def run(codes,*, now=None):
     if cn.time()<time(15,10) or cn.weekday()>4:
         out["error"]="post-close report only permitted after 15:10 on a weekday"
         return out
-    out["stocks"]=[assess_close(code,now=now,close_date=cn.date().isoformat()) for code in codes]
+    out["stocks"]=[]
+    for idx, code in enumerate(codes):
+        if idx: time_module.sleep(1.0)
+        out["stocks"].append(assess_close(code,now=now,close_date=cn.date().isoformat()))
     good=[x for x in out["stocks"] if x["status"]=="RESEARCH_TRIPLE_PASS" and not x.get("chase_risk_flag")]
     good.sort(key=lambda x:(-x["historical_3d"]["pct"],-x["turnover_yuan"]))
     out["research_priority"]=[x["symbol"] for x in good]
