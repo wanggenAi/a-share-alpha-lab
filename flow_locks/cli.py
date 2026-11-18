@@ -11,6 +11,7 @@ from zoneinfo import ZoneInfo
 
 CN=ZoneInfo("Asia/Shanghai")
 BASE="https://push2.eastmoney.com/api/qt/stock/"
+HIST="https://push2his.eastmoney.com/api/qt/stock/"
 
 def market_id(code):
     if not re.fullmatch(r"\d{6}",code): raise ValueError("ticker must have six digits")
@@ -19,7 +20,7 @@ def market_id(code):
     raise ValueError("unsupported A-share ticker")
 
 def query(path, params):
-    url=BASE+path+"?"+urllib.parse.urlencode(params)
+    url=(HIST if path=="kline/get" else BASE)+path+"?"+urllib.parse.urlencode(params)
     req=urllib.request.Request(url,headers={
         "User-Agent":"Mozilla/5.0",
         "Referer":"https://data.eastmoney.com/"})
