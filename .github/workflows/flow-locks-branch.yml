@@ -27,6 +27,8 @@ jobs:
         run: python -m unittest discover -s flow_locks/tests -v
       - name: Fetch public market data (best effort)
         run: python -m flow_locks.cli --symbols 000100 600206 603993 --json-out flow-snapshot.json
+      - name: Probe 20-session same-time volume source
+        run: python -m flow_locks.activity_probe --symbols 000100 600206 603993
       - name: Show signal evidence in Actions summary
         if: always()
         run: python -m flow_locks.summary flow-snapshot.json
