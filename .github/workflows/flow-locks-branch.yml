@@ -34,3 +34,27 @@ jobs:
           path: flow-snapshot.json
           retention-days: 2
           if-no-files-found: warn
+
+  market-discovery:
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Verify unit tests first
+        run: python -m unittest discover -s flow_locks/tests -v
+      - name: Scan A-share market snapshot (full pagination)
+        run: python -m flow_locks.market_scan --deep 5 --page-delay 0.22 --out market-snapshot.json
+      - name: Publish market ranking and data coverage
+        if: always()
+        run: python -m flow_locks.market_summary market-snapshot.json
+      - name: Save audit snapshot
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: market-discovery
+          path: market-snapshot.json
+          retention-days: 2
+          if-no-files-found: warn
