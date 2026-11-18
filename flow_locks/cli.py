@@ -71,7 +71,7 @@ def three_day_strength(daily_funds, daily_prices, today):
     if len(p)<3: raise ValueError("insufficient closed sessions")
     recent=p[-3:]
     if any(row[0] not in f or row[3]<=0 for row in recent):
-        raise ValueError("missing aligned flow/turnover data")
+        raise ValueError("unmatched series quote_dates="+str([r[0] for r in recent])+" fund_dates="+str(sorted(f)[-6:]))
     net=sum(f[row[0]] for row in recent)
     total=sum(row[3] for row in recent)
     return {"dates":[r[0] for r in recent],
