@@ -7,6 +7,10 @@ on:
       - ".github/workflows/flow-locks-branch.yml"
   workflow_dispatch:
 
+concurrency:
+  group: flow-locks-${{ github.ref }}
+  cancel-in-progress: true
+
 permissions:
   contents: read
 
