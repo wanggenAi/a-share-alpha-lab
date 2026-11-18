@@ -20,7 +20,7 @@ def market_id(code):
     raise ValueError("unsupported A-share ticker")
 
 def query(path, params):
-    url=(HIST if path=="kline/get" else BASE)+path+"?"+urllib.parse.urlencode(params)
+    url=(HIST if path=="kline/get" or (path=="fflow/kline/get" and params.get("klt")==101) else BASE)+path+"?"+urllib.parse.urlencode(params)
     req=urllib.request.Request(url,headers={
         "User-Agent":"Mozilla/5.0",
         "Referer":"https://data.eastmoney.com/"})
@@ -71,7 +71,7 @@ def three_day_strength(daily_funds, daily_prices, today):
     if len(p)<3: raise ValueError("insufficient closed sessions")
     recent=p[-3:]
     if any(row[0] not in f or row[3]<=0 for row in recent):
-        raise ValueError("unmatched series quote_dates="+str([r[0] for r in recent])+" fund_dates="+str(sorted(f)[-6:]))
+        raise ValueError("unmatched series quote_dates="+str([r[0] for r in recent])+" fund_dates="+str(sorted(f)[-6:])+" raw_dates="+str([d for d,_ in daily_funds][-8:]))
     net=sum(f[row[0]] for row in recent)
     total=sum(row[3] for row in recent)
     return {"dates":[r[0] for r in recent],
