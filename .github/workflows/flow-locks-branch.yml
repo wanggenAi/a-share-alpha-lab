@@ -64,3 +64,27 @@ jobs:
           path: market-snapshot.json
           retention-days: 2
           if-no-files-found: warn
+
+  after-close-review:
+    runs-on: ubuntu-latest
+    timeout-minutes: 12
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Verify backtest safety and close-session tests
+        run: python -m unittest discover -s flow_locks/tests -v
+      - name: Analyze 18 Nov close and next trading session
+        run: python -m flow_locks.close_review --out post-close.json
+      - name: Explain tomorrow's candidate status
+        if: always()
+        run: python -m flow_locks.close_summary post-close.json
+      - name: Save research-only report
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: next-session-research
+          path: post-close.json
+          retention-days: 3
+          if-no-files-found: warn
