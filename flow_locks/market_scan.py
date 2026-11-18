@@ -20,7 +20,7 @@ from zoneinfo import ZoneInfo
 from .cli import inspect, CN, is_trading
 
 API = "https://push2.eastmoney.com/api/qt/clist/get"
-MARKETS = "m:0+t:6,m:0+t:80,m:1+t:2,m:1+t:23,m:0+t:81+s:2048"
+MARKETS = "m:0+t:6,m:1+t:2"  # Shanghai/Shenzhen A listings; later filter MAIN BOARD only
 FIELDS = "f12,f13,f14,f2,f3,f6,f8,f62,f184,f124"
 # Conservative page size; some provider deployments cap pages at 100 records.
 PAGE_SIZE = 100
@@ -147,6 +147,8 @@ def rank_candidates(rows, *, top=50, min_turnover=50_000_000):
         p=parse_market_record(item)
         if (p and p["main_board"] and not p["risk_name_flag"]
             and p["flow_ratio_verified"] and p["turnover_yuan"] >= min_turnover
+            and not p["extreme_estimate_flag"] and not p["sharp_rise_flag"]
+            and p["change_pct"] is not None and p["change_pct"] >= -5.0
             and p["computed_main_ratio_pct"] >= 3.0
             and p["price"] > 0):
             eligible.append(p)
@@ -193,7 +195,7 @@ def run_market_scan(*, max_pages=None, deep=5, pause=0.18):
     now=datetime.now(timezone.utc)
     out={
         "generated_at_utc":now.isoformat(timespec="seconds"),
-        "method":"Snapshot ranks by f62/f6 x100, cross-check with f184; main-board only",
+        "method":"Provider estimated f62/f6 x100, sanity-check f184; filter mainboard, high jumps, extreme flow",
         "notice":"Estimated provider flows; NOT real institution trades, NOT a BUY signal.",
         "status":"DATA_BLOCKED", "buy_signal":False,
     }
