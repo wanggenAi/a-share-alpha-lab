@@ -20,8 +20,20 @@ def render(file):
            f"主板记录：{fmt(x.get('main_board_quotes'))}；资金占比可交叉验证：{fmt(x.get('flow_ratio_cross_checked'))}",
            ""]
     if not x.get("all_pages_complete"):
-        lines += ["**数据不完整：候选榜单被禁止输出，不得据此交易。**","",
+        lines += ["**全市场数据不完整：禁止输出全市场TOP榜，不得据此交易。**","",
                   f"错误：{fmt(x.get('errors') or x.get('error'))}",""]
+        sample=x.get("sample_candidates") or []
+        if sample:
+            lines += [f"### 仅已读取的 {fmt(x.get('retrieved_records'))} 条成交额优先样本（不是全市场排名）","",
+                      "| 样本序号 | 股票 | 价格 | 供应商估算资金比例 | 报价时间 |",
+                      "|---:|---|---:|---:|---|"]
+            for i,c in enumerate(sample[:15],start=1):
+                lines.append("| "+" | ".join(map(fmt,[
+                    i,c["symbol"]+" "+c["name"],c["price"],
+                    str(c["computed_main_ratio_pct"])+"%",
+                    c.get("quote_at_cn") or "未返回"
+                ]))+" |")
+            lines += ["","**样本并不完整，不能断言样本之外没有更优机会。**",""]
     else:
         lines += ["**仅是资金筛查候选，不是买入信号，也未完成价值/估值验证。**","",
                   "| 排名 | 股票 | 价格 | 当日主力估算强度 | 成交额(亿元) | 报价时间 |",
