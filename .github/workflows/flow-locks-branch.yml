@@ -37,6 +37,9 @@ jobs:
           python-version: "3.11"
       - name: Analyze latest close and next trading session
         run: python -m flow_locks.close_review --out post-close.json
+      - name: Evaluate strict next-session research gate
+        if: always()
+        run: python -m flow_locks.next_session --input post-close.json --out next-session.json --capital 10000 --risk 100
       - name: Explain next-session candidate status
         if: always()
         run: python -m flow_locks.close_summary post-close.json
@@ -45,7 +48,9 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: next-session-research
-          path: post-close.json
+          path: |
+            post-close.json
+            next-session.json
           retention-days: 3
           if-no-files-found: warn
 
