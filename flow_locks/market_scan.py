@@ -172,11 +172,38 @@ def collect(max_pages=None, pause=0.18):
             errors.append(f"page {p}: {type(exc).__name__}: {str(exc)[:120]}")
             break
     if len(pages)!=expected or errors:
+        # A partial sample may be displayed ONLY as a scoped liquidity sample.
+        # It is NOT a full-market top 50. Duplicate/invalid pages suppress it.
+        sample=[]
+        valid=True
+        items=[]
+        keys=set()
+        for index in sorted(pages):
+            page_items=pages[index]
+            if len(page_items)!=PAGE_SIZE:
+                valid=False
+                break
+            for item in page_items:
+                if not isinstance(item,dict):
+                    valid=False
+                    break
+                key=(str(item.get("f13")),str(item.get("f12")))
+                if key in keys:
+                    valid=False
+                    break
+                keys.add(key)
+                items.append(item)
+            if not valid:
+                break
+        if valid and len(pages)>=2:
+            sample=rank_candidates(items,top=15)
         return {
-            "status":"PARTIAL_DO_NOT_RANK",
+            "status":"PARTIAL_LIQUID_SAMPLE_NOT_FULL_MARKET" if sample else "PARTIAL_DO_NOT_RANK",
             "reported_market_total":total, "expected_pages":expected,
-            "retrieved_pages":len(pages), "errors":errors,
-            "candidates":[], "all_pages_complete":False
+            "retrieved_pages":len(pages), "retrieved_records":len(items),
+            "errors":errors, "candidates":[], "sample_candidates":sample,
+            "sample_scope":"first retrieved pages ordered by amount; nonexhaustive and non-atomic",
+            "all_pages_complete":False
         }
     raw=assemble_pages(pages,total)
     parsed=[parse_market_record(x) for x in raw]
@@ -236,6 +263,7 @@ def main():
     result=run_market_scan(max_pages=a.max_pages,deep=a.deep,pause=a.page_delay)
     Path(a.out).write_text(json.dumps(result,ensure_ascii=False,indent=2)+"\n",encoding="utf-8")
     summary={k:v for k,v in result.items() if k not in ("candidates","deep_checked")}
+    summary["partial_sample_top10"]=[{"code":x["symbol"],"name":x["name"],"estimated_pct":x["computed_main_ratio_pct"]} for x in result.get("sample_candidates",[])[:10]]
     summary["top10"]=[{"code":x["symbol"],"name":x["name"],"estimated_pct":x["computed_main_ratio_pct"]}
                      for x in result.get("candidates",[])[:10]]
     summary["deep_checked"]=[{"code":x["symbol"],"status":x["result"]["status"]}
