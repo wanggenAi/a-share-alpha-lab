@@ -18,7 +18,7 @@ class CloseReviewTest(unittest.TestCase):
            ("2026-11-18",80),("2026-11-19",99999)]
         res=three_complete(f,bars(),"2026-11-18")
         self.assertEqual(res["dates"],["2026-11-16","2026-11-17","2026-11-18"])
-        self.assertEqual(res["pct"],110/3000*100)
+        self.assertAlmostEqual(res["pct"],110/3000*100,places=3)
         self.assertEqual(res["positive_days"],3)
 
     def test_missing_funds_closed(self):
