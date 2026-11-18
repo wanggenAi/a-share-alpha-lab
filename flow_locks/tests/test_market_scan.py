@@ -59,6 +59,18 @@ class MarketScanTest(unittest.TestCase):
         self.assertFalse(r["all_pages_complete"])
 
     @patch("flow_locks.market_scan.fetch_page")
+    def test_partial_pages_are_labeled_not_full_market(self, mock):
+        first=[stock(f"000{i:03d}",0,ratio=5.0) for i in range(100)]
+        second=[stock(f"001{i:03d}",0,ratio=4.0) for i in range(100)]
+        mock.side_effect=[(250,first),(250,second),RuntimeError("provider 502")]
+        r=collect(pause=0)
+        self.assertFalse(r["all_pages_complete"])
+        self.assertEqual(r["candidates"],[])
+        self.assertEqual(r["retrieved_records"],200)
+        self.assertEqual(r["status"],"PARTIAL_LIQUID_SAMPLE_NOT_FULL_MARKET")
+        self.assertGreater(len(r["sample_candidates"]),0)
+
+    @patch("flow_locks.market_scan.fetch_page")
     def test_universe_changed_fails_closed(self, mock):
         a=[stock(f"000{i:03d}",0) for i in range(100)]
         mock.side_effect=[(150,a),(151,[stock("600206",1)]*50)]
