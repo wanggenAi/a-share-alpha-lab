@@ -1,4 +1,4 @@
-name: Flow locks branch probe
+name: Flow locks research branch
 on:
   push:
     branches: [standalone-flow-locks-v1]
@@ -17,7 +17,7 @@ permissions:
 jobs:
   verify:
     runs-on: ubuntu-latest
-    timeout-minutes: 8
+    timeout-minutes: 4
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
@@ -25,47 +25,9 @@ jobs:
           python-version: "3.11"
       - name: Offline unit tests
         run: python -m unittest discover -s flow_locks/tests -v
-      - name: Fetch public market data (best effort)
-        run: python -m flow_locks.cli --symbols 000100 600206 603993 --json-out flow-snapshot.json
-      - name: Probe 20-session same-time volume source
-        run: python -m flow_locks.activity_probe --symbols 000100 600206 603993
-      - name: Show signal evidence in Actions summary
-        if: always()
-        run: python -m flow_locks.summary flow-snapshot.json
-      - name: Upload observed snapshot (if returned)
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: flow-snapshot
-          path: flow-snapshot.json
-          retention-days: 2
-          if-no-files-found: warn
-
-  market-discovery:
-    runs-on: ubuntu-latest
-    timeout-minutes: 18
-    steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
-        with:
-          python-version: "3.11"
-      - name: Verify unit tests first
-        run: python -m unittest discover -s flow_locks/tests -v
-      - name: Scan A-share market snapshot (full pagination)
-        run: python -m flow_locks.market_scan --deep 5 --page-delay 0.22 --out market-snapshot.json
-      - name: Publish market ranking and data coverage
-        if: always()
-        run: python -m flow_locks.market_summary market-snapshot.json
-      - name: Save audit snapshot
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: market-discovery
-          path: market-snapshot.json
-          retention-days: 2
-          if-no-files-found: warn
 
   after-close-review:
+    needs: verify
     runs-on: ubuntu-latest
     timeout-minutes: 12
     steps:
@@ -73,11 +35,9 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      - name: Verify backtest safety and close-session tests
-        run: python -m unittest discover -s flow_locks/tests -v
-      - name: Analyze 18 Nov close and next trading session
+      - name: Analyze latest close and next trading session
         run: python -m flow_locks.close_review --out post-close.json
-      - name: Explain tomorrow's candidate status
+      - name: Explain next-session candidate status
         if: always()
         run: python -m flow_locks.close_summary post-close.json
       - name: Save research-only report
@@ -87,4 +47,28 @@ jobs:
           name: next-session-research
           path: post-close.json
           retention-days: 3
+          if-no-files-found: warn
+
+  market-discovery:
+    needs: [verify, after-close-review]
+    if: ${{ always() && needs.verify.result == 'success' }}
+    runs-on: ubuntu-latest
+    timeout-minutes: 18
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Scan A-share market snapshot (full pagination)
+        run: python -m flow_locks.market_scan --deep 5 --page-delay 0.4 --out market-snapshot.json
+      - name: Publish ranking and completeness status
+        if: always()
+        run: python -m flow_locks.market_summary market-snapshot.json
+      - name: Save audit snapshot
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: market-discovery
+          path: market-snapshot.json
+          retention-days: 2
           if-no-files-found: warn
