@@ -15,7 +15,7 @@ import urllib.parse
 import urllib.request
 from zoneinfo import ZoneInfo
 
-from .cli import inspect, CN
+from .cli import inspect, CN, is_trading
 
 API = "https://push2.eastmoney.com/api/qt/clist/get"
 MARKETS = "m:0+t:6,m:0+t:80,m:1+t:2,m:1+t:23,m:0+t:81+s:2048"
@@ -73,6 +73,9 @@ def parse_market_record(raw):
         "main_net_yuan": net, "provider_main_ratio_pct": provider_ratio,
         "computed_main_ratio_pct": round(calc, 4) if calc is not None else None,
         "flow_ratio_verified": cross_checked, "quote_at_cn": quote_at,
+        "quote_in_trading_session": bool(quote_at and is_trading(datetime.fromisoformat(quote_at))),
+        "extreme_estimate_flag": bool(calc is not None and abs(calc) >= 30),
+        "sharp_rise_flag": bool(change is not None and change > 5),
     }
 
 def fetch_page(page, page_size=PAGE_SIZE):
@@ -184,6 +187,9 @@ def run_market_scan(*, max_pages=None, deep=5, pause=0.18):
     }
     try:
         out.update(collect(max_pages=max_pages,pause=pause))
+        elapsed=(datetime.now(timezone.utc)-now).total_seconds()
+        out["scan_duration_seconds"]=round(elapsed,1)
+        out["snapshot_atomicity"]="MULTI_MINUTE_NONATOMIC" if elapsed>90 else "NOT_ATOMIC"
         if not out["all_pages_complete"]: return out
         selected=out["candidates"][:max(0,deep)]
         out["deep_checked"]=[]
@@ -194,7 +200,8 @@ def run_market_scan(*, max_pages=None, deep=5, pause=0.18):
                 "symbol":candidate["symbol"],"name":candidate["name"],
                 "rank":i+1, "result":result
             })
-        out["status"]="RESEARCH_SNAPSHOT" if out["all_pages_complete"] else out["status"]
+        out["market_in_continuous_session_at_start"]=is_trading(now)
+        out["status"]="RESEARCH_SNAPSHOT" if is_trading(now) else "MARKET_BREAK_OR_CLOSED_SNAPSHOT"
         return out
     except Exception as ex:
         out.update(status="DATA_BLOCKED",error=f"{type(ex).__name__}: {str(ex)[:180]}",
@@ -220,7 +227,7 @@ def main():
     summary["deep_checked"]=[{"code":x["symbol"],"status":x["result"]["status"]}
                              for x in result.get("deep_checked",[])]
     print(json.dumps(summary,ensure_ascii=False,indent=2))
-    return 0 if result["status"]=="RESEARCH_SNAPSHOT" else 2
+    return 0 if result["status"] in ("RESEARCH_SNAPSHOT","MARKET_BREAK_OR_CLOSED_SNAPSHOT") else 2
 
 if __name__=="__main__":
     raise SystemExit(main())
