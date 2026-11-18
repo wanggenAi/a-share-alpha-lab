@@ -6,6 +6,9 @@ import re
 import sys
 import urllib.parse
 import urllib.request
+import urllib.error
+import http.client
+import time as time_module
 from datetime import datetime, time, timezone
 from zoneinfo import ZoneInfo
 
@@ -24,8 +27,20 @@ def query(path, params):
     req=urllib.request.Request(url,headers={
         "User-Agent":"Mozilla/5.0",
         "Referer":"https://data.eastmoney.com/"})
-    with urllib.request.urlopen(req,timeout=10) as response:
-        payload=json.loads(response.read(2000000).decode("utf-8-sig"))
+    # Short bounded retry for transient TLS/network/provider throttling.
+    # Never invent values on failure.
+    for attempt in range(3):
+        try:
+            with urllib.request.urlopen(req,timeout=13) as response:
+                payload=json.loads(response.read(2000000).decode("utf-8-sig"))
+            break
+        except (urllib.error.URLError, http.client.RemoteDisconnected,
+                TimeoutError, ConnectionError, OSError) as exc:
+            if isinstance(exc, urllib.error.HTTPError) and exc.code not in (429,500,502,503,504):
+                raise
+            if attempt==2:
+                raise
+            time_module.sleep(1.2 + attempt*2.0)
     if payload.get("rc")!=0 or not isinstance(payload.get("data"),dict):
         raise ValueError("provider response invalid")
     return payload["data"]
