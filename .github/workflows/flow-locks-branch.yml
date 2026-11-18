@@ -22,8 +22,10 @@ jobs:
       - name: Offline unit tests
         run: python -m unittest discover -s flow_locks/tests -v
       - name: Fetch public market data (best effort)
-        continue-on-error: true
         run: python -m flow_locks.cli --symbols 000100 600206 603993 --json-out flow-snapshot.json
+      - name: Show signal evidence in Actions summary
+        if: always()
+        run: python -m flow_locks.summary flow-snapshot.json
       - name: Upload observed snapshot (if returned)
         if: always()
         uses: actions/upload-artifact@v4
