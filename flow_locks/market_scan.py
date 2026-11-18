@@ -13,6 +13,8 @@ import re
 import time
 import urllib.parse
 import urllib.request
+import urllib.error
+import http.client
 from zoneinfo import ZoneInfo
 
 from .cli import inspect, CN, is_trading
@@ -88,8 +90,18 @@ def fetch_page(page, page_size=PAGE_SIZE):
     req = urllib.request.Request(
         url, headers={"User-Agent":"Mozilla/5.0", "Referer":"https://data.eastmoney.com/"}
     )
-    with urllib.request.urlopen(req, timeout=13) as resp:
-        blob = resp.read(1_500_000).decode("utf-8-sig")
+    # Network-source retry only, never fill in fabricated pages.
+    for attempt in range(3):
+        try:
+            with urllib.request.urlopen(req, timeout=15) as resp:
+                blob = resp.read(1_500_000).decode("utf-8-sig")
+            break
+        except (urllib.error.URLError, http.client.RemoteDisconnected,
+                TimeoutError, ConnectionError, OSError) as exc:
+            if isinstance(exc, urllib.error.HTTPError) and exc.code not in (429,500,502,503,504):
+                raise
+            if attempt == 2: raise
+            time.sleep(1.0 + attempt*2.5)
     result = json.loads(blob)
     if not isinstance(result, dict) or result.get("rc") != 0 or not isinstance(result.get("data"), dict):
         raise ValueError("market list request failed")
