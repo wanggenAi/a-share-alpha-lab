@@ -118,6 +118,15 @@ def inspect(code,now,stale_after=10):
         trend=close[-1]>=ma20 and ma5>=ma10
         prior=out["completed_3d"]
         main=(prior["main_strength_pct"]>=3 and prior["positive_days"]>=2 and current>0)
+        # Completed 5m volume versus the same clock slot on 20 prior sessions.
+        # Provider data failure leaves the activity gate UNKNOWN, never assumed true.
+        try:
+            from .activity import five_minute_volume, relative_volume
+            activity=relative_volume(five_minute_volume(code),now)
+        except Exception as activity_error:
+            activity={"pass":None,"reason":f"{type(activity_error).__name__}: {str(activity_error)[:130]}"}
+        all_locks=(trend and main and activity.get("pass") is True)
+        two_locks=(trend and main)
         out.update(
             price=close[-1],today_main_estimate_yuan=minute[-1][1],
             today_turnover_yuan=daily[-1][3],
@@ -125,9 +134,10 @@ def inspect(code,now,stale_after=10):
             trend_lock={"pass":trend,"ma5":round(ma5,3),"ma10":round(ma10,3),"ma20":round(ma20,3)},
             main_funds_lock={"pass":main,"threshold_pct_experimental":3.0,
                              "note":"main only, not main+hot-money"},
-            activity_lock={"pass":None,"reason":"same-minute historical turnover missing"},
-            status="RESEARCH_WATCH" if trend and main else "WAIT",
-            warning="NO BUY: activity lock, risk and fundamental valuation are not verified"
+            activity_lock=activity,
+            status=("TRIPLE_LOCK_RESEARCH" if all_locks else
+                    "TWO_LOCK_WATCH" if two_locks else "WAIT"),
+            warning="NO BUY: valuation, execution, liquidity/limit and risk gates not independently verified"
         )
     except Exception as ex:
         out.update(status="DATA_BLOCKED",error=f"{type(ex).__name__}: {str(ex)[:150]}")
