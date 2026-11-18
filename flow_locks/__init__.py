@@ -1,1 +1,1 @@
-Independent A-share funds flow experiment.
+"""Independent A-share funds-flow research experiment."""
