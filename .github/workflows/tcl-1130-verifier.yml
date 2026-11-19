@@ -5,6 +5,7 @@ on:
     paths:
       - ".github/workflows/tcl-1130-verifier.yml"
       - "flow_locks/tcl_1130_verifier.py"
+      - "flow_locks/tcl_funds_1130.py"
   workflow_dispatch:
 permissions:
   contents: read
@@ -17,14 +18,20 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-      - name: Fetch 20 prior sessions, verify 11:30 relative volume against screenshot
+      - name: Verify 20 prior sessions 11:30 relative volume against screenshot
         run: |
           set -o pipefail
           python -m flow_locks.tcl_1130_verifier | tee tcl-1130-verification.log
-      - name: Save audit output (including failures)
+      - name: Crosscheck independent main-flow estimates and MA20
+        if: always()
+        run: |
+          python -m flow_locks.tcl_funds_1130 | tee tcl-funds-verification.log
+      - name: Save audit outputs (including failures)
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: tcl-1130-verification
-          path: tcl-1130-verification.log
+          path: |
+            tcl-1130-verification.log
+            tcl-funds-verification.log
           retention-days: 3
