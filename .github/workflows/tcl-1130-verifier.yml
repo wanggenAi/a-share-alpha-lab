@@ -1,0 +1,30 @@
+name: TCL 11-19 historical minute-volume verification
+on:
+  push:
+    branches: [tcl-volume-verify-20261119]
+    paths:
+      - ".github/workflows/tcl-1130-verifier.yml"
+      - "flow_locks/tcl_1130_verifier.py"
+  workflow_dispatch:
+permissions:
+  contents: read
+jobs:
+  verify-tcl-1130:
+    runs-on: ubuntu-latest
+    timeout-minutes: 8
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - name: Fetch 20 prior sessions, verify 11:30 relative volume against screenshot
+        run: |
+          set -o pipefail
+          python -m flow_locks.tcl_1130_verifier | tee tcl-1130-verification.log
+      - name: Save audit output (including failures)
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: tcl-1130-verification
+          path: tcl-1130-verification.log
+          retention-days: 3
